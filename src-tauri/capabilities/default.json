@@ -50,6 +50,9 @@
     "allow-delete-playlist",
     "allow-download-track",
     "allow-discord-presence",
-    "allow-discord-available"
+    "allow-discord-available",
+    "allow-check-for-update",
+    "allow-open-update-page",
+    "allow-install-update"
   ]
 }

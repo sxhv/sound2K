@@ -1,5 +1,6 @@
 import { Store } from "./store";
 import type {
+  UpdateInfo,
   Account,
   FilterPrefs,
   PlaylistSummary,
@@ -71,6 +72,9 @@ export interface AppState {
   artBackgrounds: boolean;
   mascot: boolean;
   discordStatus: boolean;
+  updateCheck: boolean;
+  /** Set when a newer version was found. */
+  update: UpdateInfo | null;
 
   /** Library (tabs) or one of the top-bar pages. */
   page: "library" | "equalizer" | "sound";
@@ -112,6 +116,7 @@ export const DEFAULT_SETTINGS: Settings = {
   artBackgrounds: true,
   mascot: true,
   discordStatus: false,
+  updateCheck: true,
 };
 
 export function createInitialState(settings: Settings): AppState {
@@ -145,6 +150,8 @@ export function createInitialState(settings: Settings): AppState {
     artBackgrounds: settings.artBackgrounds ?? DEFAULT_SETTINGS.artBackgrounds,
     mascot: settings.mascot ?? DEFAULT_SETTINGS.mascot,
     discordStatus: settings.discordStatus ?? DEFAULT_SETTINGS.discordStatus,
+    updateCheck: settings.updateCheck ?? DEFAULT_SETTINGS.updateCheck,
+    update: null,
     page: "library",
     nowPlayingOpen: false,
     queueOpen: false,

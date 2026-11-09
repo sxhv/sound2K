@@ -41,6 +41,9 @@ const COMMANDS: &[&str] = &[
     "download_track",
     "discord_presence",
     "discord_available",
+    "check_for_update",
+    "open_update_page",
+    "install_update",
 ];
 
 fn main() {

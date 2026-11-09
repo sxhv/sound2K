@@ -6,6 +6,7 @@ import type { Theme } from "../types";
 import { api, errorMessage } from "../api";
 import { formatBytes } from "../lib/format";
 import { toast } from "./toast";
+import { checkForUpdate, installUpdate, openUpdate } from "../updates";
 import { closePopover, isPopoverOpenFor, openPopover } from "./popover";
 
 const THEMES: readonly { id: Theme; label: string }[] = [
@@ -89,6 +90,10 @@ export class TopBar {
   }
 
   update(s: AppState, prev: AppState | null): void {
+    if (!prev || s.update !== prev.update) {
+      this.gear.classList.toggle("has-dot", s.update !== null);
+      this.gear.title = s.update ? `Settings · update v${s.update.latest} available` : "Settings";
+    }
     if (!prev || s.page !== prev.page || s.eqEnabled !== prev.eqEnabled) {
       this.eqBtn.classList.toggle("is-active", s.page === "equalizer");
       this.eqBtn.setAttribute("aria-pressed", String(s.page === "equalizer"));
@@ -177,7 +182,55 @@ export class TopBar {
       choices,
       h("h3", { text: "Storage" }),
       ...this.buildStorageSettings(),
+      h("h3", { text: "About" }),
+      ...this.buildAboutSettings(),
     ]);
+  }
+
+  private buildAboutSettings(): HTMLElement[] {
+    const s = this.store.get();
+    const status = h("p", { class: "small", text: s.update ? `v${s.update.latest} available` : `Sound2K v${this.version}` });
+    const check = h("button", { class: "glass-btn small", text: "Check for updates", attrs: { type: "button" } });
+    const get = h("button", { class: "glass-btn accent small", text: "Update & restart", attrs: { type: "button" } });
+    get.hidden = !s.update;
+    get.addEventListener("click", () => {
+      get.disabled = true;
+      check.disabled = true;
+      get.textContent = "Downloading…";
+      void installUpdate((pct) => {
+        get.textContent = pct === null ? "Downloading…" : pct >= 100 ? "Installing…" : `Downloading ${pct}%`;
+      }).finally(() => {
+        // Only reached if the update failed (otherwise the app restarts).
+        get.disabled = false;
+        check.disabled = false;
+        get.textContent = "Update & restart";
+      });
+    });
+    const notes = h("button", { class: "link-btn small", text: "What's new", attrs: { type: "button" } });
+    notes.hidden = !s.update?.url;
+    notes.addEventListener("click", () => openUpdate(this.store));
+    check.addEventListener("click", () => {
+      check.disabled = true;
+      check.textContent = "Checking…";
+      void checkForUpdate(this.store, true).finally(() => {
+        check.disabled = false;
+        check.textContent = "Check for updates";
+        const u = this.store.get().update;
+        if (u) {
+          status.textContent = `v${u.latest} available`;
+          get.hidden = false;
+          notes.hidden = !u.url;
+        }
+      });
+    });
+    const auto = h("input", { attrs: { type: "checkbox" } });
+    auto.checked = s.updateCheck;
+    auto.addEventListener("change", () => this.store.set({ updateCheck: auto.checked }));
+    return [
+      h("div", { class: "button-row storage-row" }, [status, notes]),
+      h("div", { class: "button-row" }, [get, check]),
+      h("label", { class: "check" }, [auto, h("span", { text: "Check on launch" })]),
+    ];
   }
 
   private buildStorageSettings(): HTMLElement[] {

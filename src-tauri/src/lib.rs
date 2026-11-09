@@ -14,6 +14,7 @@ mod player;
 mod session;
 mod settings;
 mod soundcloud;
+mod updates;
 mod window;
 
 use tauri::{WebviewUrl, WebviewWindowBuilder};
@@ -22,6 +23,8 @@ pub fn run() {
     tauri::Builder::default()
         // Used only from Rust (open_on_soundcloud); the UI gets no opener permission.
         .plugin(tauri_plugin_opener::init())
+        // Self-update: Rust-only (the UI has no updater permissions).
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(soundcloud::SoundCloud::new())
         .manage(player::Player::spawn())
         .setup(|app| {
@@ -87,6 +90,9 @@ pub fn run() {
             commands::download_track,
             commands::discord_presence,
             commands::discord_available,
+            commands::check_for_update,
+            commands::open_update_page,
+            commands::install_update,
             window::set_window_mode,
         ])
         .run(tauri::generate_context!())

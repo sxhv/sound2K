@@ -45,6 +45,7 @@
 - **Jump to the playing song** in any list (Ctrl+J)
 - **Discord status:** "Listening to …" with cover art and a *Listen on SoundCloud* button (opt-in)
 - **Download** tracks whose artist allows it, via SoundCloud's official download
+- **Updates itself:** Settings → About → *Update & restart* (signed updates from GitHub Releases)
 
 ## Screenshots
 
@@ -90,7 +91,8 @@ Open **Settings** (gear icon) → **Sign in to SoundCloud**. A separate window o
 - **No telemetry, no analytics, no accounts other than SoundCloud.**
 - Your sign-in is stored in **Windows Credential Manager**, never in a file. Sound2K never reads your browsers or their saved logins.
 - Songs stream **into memory only** and are never saved to disk. App data (settings, cache, history) lives in `%LOCALAPPDATA%\Sound2K`, and the artwork cache is capped at 50 MB.
-- The app only talks to SoundCloud (and, if you turn it on, the **Discord app on your PC**). Requests to anything else are refused in code.
+- The app only talks to SoundCloud, GitHub (to check for updates; can be turned off) and, if you turn it on, the **Discord app on your PC**. Requests to anything else are refused in code.
+- **Updates are signed.** Sound2K only installs an update whose signature matches the Sound2K key, so a tampered download can't be installed.
 - The window runs under a strict Content Security Policy with minimal Tauri permissions; the sign-in window gets none.
 
 ## Build from source
@@ -115,7 +117,9 @@ The installer appears in `src-tauri\target\release\bundle\nsis\`. Rust unit test
    git tag v0.2.0
    git push; git push --tags
    ```
-3. GitHub Actions builds the installer (~15 min) and creates a **draft** release. Check it under *Releases* and press **Publish**.
+3. GitHub Actions builds and **signs** the installer (~15 min) and creates a **draft** release. Check it under *Releases* and press **Publish**. Installed copies then offer *Update & restart*.
+
+Signing needs two repository secrets (*Settings → Secrets and variables → Actions*): `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Keep the private key safe: if it's lost, existing installs can't be updated; if it leaks, someone could sign fake updates.
 
 </details>
 

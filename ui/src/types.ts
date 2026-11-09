@@ -89,6 +89,15 @@ export interface Settings {
   mascot: boolean;
   /** Show "Listening to …" on Discord. */
   discordStatus: boolean;
+  /** Look for a newer version on GitHub at startup. */
+  updateCheck: boolean;
+}
+
+export interface UpdateInfo {
+  current: string;
+  latest: string;
+  available: boolean;
+  url: string | null;
 }
 
 /** Saved playback session ("pick up where you left off"). */

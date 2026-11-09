@@ -39,5 +39,16 @@
     "publisher": "Sound2K",
     "shortDescription": "A compact SoundCloud player for Windows",
     "category": "Music"
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "PASTE_PUBLIC_KEY_HERE",
+      "endpoints": [
+        "https://github.com/sxhv/sound2K/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

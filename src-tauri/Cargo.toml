@@ -38,6 +38,8 @@ souvlaki = "0.8"
 keyring = { version = "3", features = ["windows-native"] }
 # Ctrl+Alt+L click-through toggle for the pinned mini-player (Rust-side only).
 tauri-plugin-global-shortcut = "2"
+# Self-update from GitHub Releases (signed; see updates.rs).
+tauri-plugin-updater = "2"
 # Decodes the small artwork JPEG to pick the theme colour (pure Rust).
 jpeg-decoder = { version = "0.3", default-features = false }
 

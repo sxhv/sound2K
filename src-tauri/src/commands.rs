@@ -692,6 +692,29 @@ pub async fn download_track(
     }
 }
 
+/// Is a newer Sound2K published on GitHub? (Only checks; installs nothing.)
+#[tauri::command]
+pub async fn check_for_update(app: AppHandle) -> AppResult<crate::updates::UpdateInfo> {
+    crate::updates::check(&app).await
+}
+
+/// Download, verify and install the latest version, then restart.
+#[tauri::command]
+pub async fn install_update(app: AppHandle) -> AppResult<()> {
+    crate::updates::install(&app).await
+}
+
+/// Open a Sound2K release page in the default browser.
+#[tauri::command]
+pub fn open_update_page(app: AppHandle, url: String) -> AppResult<()> {
+    if !crate::updates::is_release_page(&url) {
+        return Err(AppError::Api("Not a Sound2K release page.".into()));
+    }
+    app.opener()
+        .open_url(url, None::<&str>)
+        .map_err(|e| AppError::Api(format!("Couldn't open the browser ({e}).")))
+}
+
 /// Show (or clear, with `null`) the Discord "Listening to" status.
 #[tauri::command]
 pub fn discord_presence(presence: Option<crate::discord::Presence>) {

@@ -72,6 +72,8 @@ pub struct Settings {
     pub mascot: bool,
     /// Show "Listening to …" on Discord (off by default: it's public).
     pub discord_status: bool,
+    /// Look for a newer version on GitHub when the app starts.
+    pub update_check: bool,
 }
 
 impl Default for Settings {
@@ -91,6 +93,7 @@ impl Default for Settings {
             art_backgrounds: true,
             mascot: true,
             discord_status: false,
+            update_check: true,
         }
     }
 }

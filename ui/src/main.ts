@@ -5,6 +5,7 @@ import { api, errorMessage } from "./api";
 import { loadLibrary, syncLibrary } from "./library";
 import { mountApp, type AppHandle } from "./app";
 import { startDiscordStatus } from "./discordStatus";
+import { startUpdateCheck } from "./updates";
 import { toast } from "./components/toast";
 import { Player } from "./player/player";
 import { installMediaKeys } from "./player/mediaKeys";
@@ -31,6 +32,7 @@ function settingsOf(s: AppState): Settings {
     artBackgrounds: s.artBackgrounds,
     mascot: s.mascot,
     discordStatus: s.discordStatus,
+    updateCheck: s.updateCheck,
   };
 }
 
@@ -139,6 +141,7 @@ async function boot(): Promise<void> {
   });
   const app = mountApp(root, store, player, info.version);
   startDiscordStatus(store);
+  startUpdateCheck(store);
   installShortcuts(app, player);
   persistSettings(store);
   persistHistory(store);
