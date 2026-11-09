@@ -1,0 +1,52 @@
+[package]
+name = "sound2k"
+version = "0.1.0"
+description = "Sound2K — a compact SoundCloud desktop player"
+edition = "2021"
+rust-version = "1.80"
+publish = false
+
+[lib]
+name = "sound2k_lib"
+crate-type = ["rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# No Tauri plugins (fs, shell, http, ...) are enabled.
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# HTTPS client for SoundCloud (rustls: no OpenSSL / system TLS config needed).
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "gzip"] }
+tokio = { version = "1", features = ["time", "sync"] }
+# Parallel, in-order HLS segment downloads.
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
+bytes = "1"
+url = "2"
+regex = "1"
+# Audio output only (WASAPI via cpal); decoding is done by symphonia below.
+rodio = { version = "0.20", default-features = false }
+# MP3 and AAC/MP4 decoding (pure Rust).
+symphonia = { version = "0.5", default-features = false, features = ["mp3", "aac", "isomp4"] }
+# Opens soundcloud.com links in the default browser (called from Rust only).
+tauri-plugin-opener = "2"
+# Windows media keys and the volume-flyout "now playing" overlay (SMTC).
+souvlaki = "0.8"
+# Windows Credential Manager for the session token.
+keyring = { version = "3", features = ["windows-native"] }
+# Ctrl+Alt+L click-through toggle for the pinned mini-player (Rust-side only).
+tauri-plugin-global-shortcut = "2"
+# Decodes the small artwork JPEG to pick the theme colour (pure Rust).
+jpeg-decoder = { version = "0.3", default-features = false }
+
+[target.'cfg(windows)'.dependencies]
+# Marks the pinned mini-player "no-activate" so clicking it never steals
+# focus from a fullscreen game.
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
+
+[profile.release]
+codegen-units = 1
+lto = true
+strip = true

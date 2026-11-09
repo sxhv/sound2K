@@ -1,0 +1,49 @@
+//! Data shapes shared with the UI (and the cache files).
+//! Field names are camelCase on the wire.
+
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Track {
+    pub id: String,
+    pub title: String,
+    pub artist: String,
+    pub duration_ms: u64,
+    pub artwork_url: Option<String>,
+    pub permalink_url: Option<String>,
+    /// When the track was liked, if the source provides it. Never invented.
+    pub liked_at_ms: Option<i64>,
+    /// False for blocked, preview-only (Go+) or otherwise unstreamable tracks.
+    pub playable: bool,
+    /// The artist allows downloads (SoundCloud's own download button).
+    #[serde(default)]
+    pub downloadable: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlaylistSummary {
+    pub id: String,
+    pub title: String,
+    pub owner: String,
+    pub track_count: u32,
+    pub artwork_url: Option<String>,
+    /// SoundCloud user id of the owner (0 = unknown). Only your own
+    /// playlists can be edited.
+    #[serde(default)]
+    pub owner_id: u64,
+    /// "public" or "private".
+    #[serde(default)]
+    pub sharing: Option<String>,
+}
+
+/// The signed-in SoundCloud user (public profile fields only).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Account {
+    pub id: u64,
+    pub username: String,
+    pub avatar_url: Option<String>,
+    pub permalink_url: Option<String>,
+}

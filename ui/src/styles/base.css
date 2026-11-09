@@ -1,0 +1,233 @@
+/* Accent colours. Registered so they animate: when a new song starts the
+   whole UI fades to the colours of its artwork (set by app.ts). */
+@property --accent {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #ff7900;
+}
+@property --accent-light {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #ff9a32;
+}
+@property --accent-dark {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #c94a00;
+}
+
+/* ==========================================================================
+   Theme tokens
+   A — Orange Glass (default): glossy Y2K / Frutiger Aero glass
+   B — Dark Orange: charcoal, less transparency, less glow, higher contrast
+   ========================================================================== */
+
+:root {
+  --orange: var(--accent);
+  --tangerine: var(--accent-light);
+  --deep-orange: var(--accent-dark);
+  --burnt: #33160d;
+  --bg: #17110f;
+  --warm-white: #fff2e8;
+  --on-accent: #2a0d00; /* dark text on the accent */
+  --accent-pale: color-mix(in srgb, var(--accent-light) 50%, #fff);
+  --accent-deep: color-mix(in srgb, var(--accent-dark) 55%, #000);
+  color-scheme: dark;
+  transition:
+    --accent 1.4s ease,
+    --accent-light 1.4s ease,
+    --accent-dark 1.4s ease;
+}
+
+:root,
+[data-theme="orange-glass"] {
+  --text: var(--warm-white);
+  --muted: #d4b4a0;
+  --faint: rgba(255, 242, 232, 0.5);
+
+  --app-bg:
+    radial-gradient(90% 55% at 12% -8%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 62%),
+    radial-gradient(60% 45% at 100% 0%, color-mix(in srgb, var(--accent-light) 16%, transparent), transparent 60%),
+    radial-gradient(80% 55% at 50% 112%, color-mix(in srgb, var(--accent-dark) 26%, transparent), transparent 62%),
+    linear-gradient(180deg, #1d1411 0%, var(--bg) 100%);
+
+  --panel-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.035));
+  --panel-solid: rgba(40, 22, 15, 0.92);
+  --panel-border: color-mix(in srgb, var(--accent-light) 24%, transparent);
+  --panel-blur: blur(16px) saturate(150%);
+  --panel-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+
+  --btn-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.17) 0%, rgba(255, 255, 255, 0.06) 49%, rgba(0, 0, 0, 0.1) 51%, rgba(255, 255, 255, 0.05) 100%);
+  --btn-bg-hover: linear-gradient(180deg, color-mix(in srgb, var(--accent-light) 30%, transparent) 0%, color-mix(in srgb, var(--accent) 14%, transparent) 49%, color-mix(in srgb, var(--accent-deep) 12%, transparent) 51%, color-mix(in srgb, var(--accent) 12%, transparent) 100%);
+  --btn-border: color-mix(in srgb, var(--accent-light) 34%, transparent);
+  --btn-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -1px 0 rgba(0, 0, 0, 0.3), 0 2px 6px rgba(0, 0, 0, 0.35);
+
+  --accent-bg: linear-gradient(180deg, var(--accent-pale) 0%, var(--accent-light) 47%, var(--accent) 53%, var(--accent-dark) 100%);
+  --accent-border: color-mix(in srgb, var(--accent-pale) 85%, transparent);
+  --glow: 0 0 14px color-mix(in srgb, var(--accent) 55%, transparent), 0 0 3px color-mix(in srgb, var(--accent-light) 90%, transparent);
+  --glow-soft: 0 0 10px color-mix(in srgb, var(--accent) 35%, transparent);
+
+  --field-bg: linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.18));
+  --field-border: color-mix(in srgb, var(--accent-light) 30%, transparent);
+
+  --row-hover: color-mix(in srgb, var(--accent-light) 8%, transparent);
+  --row-selected: linear-gradient(90deg, color-mix(in srgb, var(--accent) 30%, transparent), color-mix(in srgb, var(--accent) 10%, transparent));
+  --row-selected-border: color-mix(in srgb, var(--accent-light) 50%, transparent);
+
+  --gloss: 1;
+  --radius: 14px;
+  --radius-sm: 10px;
+}
+
+[data-theme="dark-orange"] {
+  --text: #fbf3ee;
+  --muted: #dcc8bb;
+  --faint: rgba(251, 243, 238, 0.55);
+
+  --app-bg: #131110;
+  --panel-bg: #1c1917;
+  --panel-solid: #1f1b19;
+  --panel-border: #332c28;
+  --panel-blur: none;
+  --panel-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+
+  --btn-bg: #272220;
+  --btn-bg-hover: #322b28;
+  --btn-border: #403632;
+  --btn-shadow: none;
+
+  --accent-bg: var(--orange);
+  --accent-border: var(--orange);
+  --glow: none;
+  --glow-soft: none;
+
+  --field-bg: #100e0d;
+  --field-border: #3a322e;
+
+  --row-hover: #1f1b19;
+  --row-selected: color-mix(in srgb, var(--accent) 16%, transparent);
+  --row-selected-border: color-mix(in srgb, var(--accent) 60%, transparent);
+
+  --gloss: 0;
+  --radius: 8px;
+  --radius-sm: 6px;
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--app-bg);
+  color: var(--text);
+  font: 13px/1.35 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  overflow: hidden;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--tangerine);
+  outline-offset: 2px;
+}
+
+.icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  display: block;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.small {
+  font-size: 11.5px;
+}
+
+.boot-msg {
+  margin: auto;
+  color: var(--muted);
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--accent-light) 28%, transparent);
+  border: 3px solid transparent;
+  border-radius: 99px;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--accent-light) 45%, transparent);
+}
+
+/* Pause animations while minimized; respect reduced-motion settings. */
+.is-window-hidden *,
+.is-window-hidden *::before,
+.is-window-hidden *::after {
+  animation-play-state: paused !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

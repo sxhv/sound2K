@@ -1,0 +1,715 @@
+//! Commands the frontend may call. Each one is listed in build.rs (which
+//! generates its permission), granted to the main window only in
+//! capabilities/default.json, and registered in lib.rs.
+//!
+//! When signed out, library commands return the built-in sample library.
+
+use crate::auth::{login, token_store};
+use crate::cache::{self, CacheFile};
+use crate::errors::{AppError, AppResult};
+use crate::history;
+use crate::library::mock;
+use crate::library::models::{Account, PlaylistSummary, Track};
+use crate::player::buffer::SharedBuffer;
+use crate::player::decode::StreamDecoder;
+use crate::player::dsp::DspSettings;
+use crate::player::{stream, BoxedSource, Player, PlayerStatus, Preloaded};
+use crate::session::{self, Session};
+use crate::settings::{self, Settings};
+use crate::soundcloud::{SoundCloud, StreamKind};
+use rodio::Source;
+use serde::Serialize;
+use std::sync::Arc;
+use std::time::Duration;
+use tauri::{AppHandle, Manager, State};
+use tauri_plugin_opener::OpenerExt;
+
+/// Bytes to buffer before starting playback (~12 s of 128 kbps MP3).
+const START_BUFFER_BYTES: usize = 192 * 1024;
+
+#[derive(Serialize)]
+pub struct AppInfo {
+    name: String,
+    version: String,
+}
+
+#[tauri::command]
+pub fn app_info(app: AppHandle) -> AppInfo {
+    let info = app.package_info();
+    AppInfo {
+        name: info.name.clone(),
+        version: info.version.to_string(),
+    }
+}
+
+/// The signed-in account, or null when signed out.
+#[tauri::command]
+pub async fn get_account(app: AppHandle, sc: State<'_, SoundCloud>) -> AppResult<Option<Account>> {
+    let Some(token) = token_store::load()? else {
+        sc.set_token(None);
+        return Ok(None);
+    };
+    sc.set_token(Some(token));
+    if let Some(account) = cache::read::<Account>(&app, CacheFile::Account) {
+        return Ok(Some(account));
+    }
+    let account = sc.me().await?;
+    cache::write(&app, CacheFile::Account, &account)?;
+    Ok(Some(account))
+}
+
+/// Opens the in-app SoundCloud sign-in window and waits for it to finish.
+#[tauri::command]
+pub async fn start_login(app: AppHandle, sc: State<'_, SoundCloud>) -> AppResult<Account> {
+    let token = login::sign_in_and_capture_token(&app).await?;
+    let previous = sc.has_token();
+    sc.set_token(Some(token.clone()));
+    let account = match sc.me().await {
+        Ok(account) => account,
+        Err(e) => {
+            if !previous {
+                sc.set_token(None);
+            }
+            return Err(e);
+        }
+    };
+    token_store::save(&token)?;
+    // New session: drop anything cached for a previous account.
+    cache::clear_all(&app);
+    cache::write(&app, CacheFile::Account, &account)?;
+    Ok(account)
+}
+
+/// Forget the session: token, cached library, and the app's web cookies.
+#[tauri::command]
+pub async fn logout(
+    app: AppHandle,
+    sc: State<'_, SoundCloud>,
+    player: State<'_, Player>,
+) -> AppResult<()> {
+    player.stop();
+    sc.set_token(None);
+    token_store::clear()?;
+    cache::clear_all(&app);
+    history::clear(&app);
+    session::clear(&app);
+    if let Some(main) = app.get_webview_window("main") {
+        // Removes the SoundCloud cookies left by the sign-in window
+        // (both windows share the app's own WebView2 profile).
+        let _ = main.clear_all_browsing_data();
+    }
+    Ok(())
+}
+
+/// How much disk space the app uses, in bytes. Audio is never written to
+/// disk (it is streamed into memory), so this is artwork/web cache, the
+/// cached library lists, and small settings files.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StorageInfo {
+    total: u64,
+    web_cache: u64,
+    library_cache: u64,
+    other: u64,
+    folder: String,
+}
+
+#[tauri::command]
+pub fn storage_info(app: AppHandle) -> AppResult<StorageInfo> {
+    let root = crate::paths::app_data_dir(&app)?;
+    let total = crate::paths::dir_size(&root);
+    let web_cache = crate::paths::dir_size(&crate::paths::webview_data_dir(&app)?);
+    let library_cache = crate::paths::dir_size(&crate::paths::cache_dir(&app)?);
+    Ok(StorageInfo {
+        total,
+        web_cache,
+        library_cache,
+        other: total.saturating_sub(web_cache + library_cache),
+        folder: root.display().to_string(),
+    })
+}
+
+/// Clear the artwork/web cache and the cached library lists. Keeps you
+/// signed in (the token is in Credential Manager), and keeps settings,
+/// history and the last session.
+#[tauri::command]
+pub fn clear_cache(app: AppHandle) -> AppResult<()> {
+    cache::clear_all(&app);
+    if let Some(main) = app.get_webview_window("main") {
+        main.clear_all_browsing_data()?;
+    }
+    Ok(())
+}
+
+// --- Playlist editing ------------------------------------------------------
+
+fn numeric_playlist_id(id: &str) -> AppResult<u64> {
+    id.strip_prefix("sc-playlist:")
+        .and_then(|n| n.parse::<u64>().ok())
+        .ok_or_else(|| AppError::Api("Only SoundCloud playlists can be edited.".into()))
+}
+
+fn require_sign_in(sc: &SoundCloud) -> AppResult<()> {
+    if sc.has_token() {
+        Ok(())
+    } else {
+        Err(AppError::Auth("Sign in to edit playlists.".into()))
+    }
+}
+
+/// Keep the cached playlist list in step with an edit.
+fn cache_playlist(app: &AppHandle, summary: Option<&PlaylistSummary>, removed_id: Option<&str>) {
+    let Some(mut list) = cache::read::<Vec<PlaylistSummary>>(app, CacheFile::Playlists) else {
+        return;
+    };
+    if let Some(id) = removed_id {
+        list.retain(|p| p.id != id);
+    }
+    if let Some(s) = summary {
+        match list.iter_mut().find(|p| p.id == s.id) {
+            Some(existing) => *existing = s.clone(),
+            None => list.insert(0, s.clone()),
+        }
+    }
+    let _ = cache::write(app, CacheFile::Playlists, &list);
+}
+
+#[tauri::command]
+pub async fn create_playlist(
+    app: AppHandle,
+    sc: State<'_, SoundCloud>,
+    title: String,
+    private: bool,
+    track_ids: Vec<String>,
+) -> AppResult<PlaylistSummary> {
+    require_sign_in(&sc)?;
+    let title = title.trim();
+    if title.is_empty() || title.chars().count() > 100 {
+        return Err(AppError::Api(
+            "Playlist names must be 1–100 characters.".into(),
+        ));
+    }
+    let ids = track_ids
+        .iter()
+        .map(|id| numeric_track_id(id))
+        .collect::<AppResult<Vec<u64>>>()?;
+    let summary = sc.create_playlist(title, private, &ids).await?;
+    cache_playlist(&app, Some(&summary), None);
+    Ok(summary)
+}
+
+#[tauri::command]
+pub async fn rename_playlist(
+    app: AppHandle,
+    sc: State<'_, SoundCloud>,
+    playlist_id: String,
+    title: String,
+) -> AppResult<PlaylistSummary> {
+    require_sign_in(&sc)?;
+    let title = title.trim();
+    if title.is_empty() || title.chars().count() > 100 {
+        return Err(AppError::Api(
+            "Playlist names must be 1–100 characters.".into(),
+        ));
+    }
+    let summary = sc
+        .rename_playlist(numeric_playlist_id(&playlist_id)?, title)
+        .await?;
+    cache_playlist(&app, Some(&summary), None);
+    Ok(summary)
+}
+
+/// `action`: "add", "remove", "up" or "down".
+#[tauri::command]
+pub async fn edit_playlist_track(
+    app: AppHandle,
+    sc: State<'_, SoundCloud>,
+    playlist_id: String,
+    track_id: String,
+    action: String,
+) -> AppResult<PlaylistSummary> {
+    require_sign_in(&sc)?;
+    let pid = numeric_playlist_id(&playlist_id)?;
+    let tid = numeric_track_id(&track_id)?;
+    let summary = match action.as_str() {
+        "add" => sc.add_to_playlist(pid, tid).await?,
+        "remove" => sc.remove_from_playlist(pid, tid).await?,
+        "up" => sc.move_in_playlist(pid, tid, -1).await?,
+        "down" => sc.move_in_playlist(pid, tid, 1).await?,
+        _ => return Err(AppError::Api("Unknown playlist action.".into())),
+    };
+    cache_playlist(&app, Some(&summary), None);
+    Ok(summary)
+}
+
+#[tauri::command]
+pub async fn delete_playlist(
+    app: AppHandle,
+    sc: State<'_, SoundCloud>,
+    playlist_id: String,
+) -> AppResult<()> {
+    require_sign_in(&sc)?;
+    sc.delete_playlist(numeric_playlist_id(&playlist_id)?)
+        .await?;
+    cache_playlist(&app, None, Some(&playlist_id));
+    Ok(())
+}
+
+/// Theme colour of a track's artwork (see colour.rs). Only fetches from
+/// SoundCloud's image CDN; the image is never saved.
+#[tauri::command]
+pub async fn artwork_colour(sc: State<'_, SoundCloud>, url: String) -> AppResult<Option<[u8; 3]>> {
+    let url: url::Url = url.parse()?;
+    let host = url.host_str().unwrap_or_default();
+    if url.scheme() != "https" || !(host == "sndcdn.com" || host.ends_with(".sndcdn.com")) {
+        return Err(AppError::Api(
+            "Artwork must come from SoundCloud's image server.".into(),
+        ));
+    }
+    let response = sc.http().get(url).send().await?.error_for_status()?;
+    if response.content_length().is_some_and(|n| n > 1_000_000) {
+        return Ok(None);
+    }
+    let bytes = response.bytes().await?;
+    Ok(crate::colour::from_jpeg(&bytes))
+}
+
+async fn account_id(app: &AppHandle, sc: &SoundCloud) -> AppResult<u64> {
+    if let Some(account) = cache::read::<Account>(app, CacheFile::Account) {
+        return Ok(account.id);
+    }
+    let account = sc.me().await?;
+    cache::write(app, CacheFile::Account, &account)?;
+    Ok(account.id)
+}
+
+/// Liked tracks, newest first. `refresh: false` returns the local cache
+/// when there is one (instant start); `refresh: true` re-downloads.
+#[tauri::command]
+pub async fn get_liked_tracks(
+    app: AppHandle,
+    sc: State<'_, SoundCloud>,
+    refresh: bool,
+) -> AppResult<Vec<Track>> {
+    if !sc.has_token() {
+        return Ok(mock::library().liked.clone());
+    }
+    if !refresh {
+        if let Some(cached) = cache::read::<Vec<Track>>(&app, CacheFile::Likes) {
+            return Ok(cached);
+        }
+    }
+    let user_id = account_id(&app, &sc).await?;
+    let tracks = sc.liked_tracks(user_id).await?;
+    cache::write(&app, CacheFile::Likes, &tracks)?;
+    Ok(tracks)
+}
+
+#[tauri::command]
+pub async fn get_playlists(
+    app: AppHandle,
+    sc: State<'_, SoundCloud>,
+    refresh: bool,
+) -> AppResult<Vec<PlaylistSummary>> {
+    if !sc.has_token() {
+        return Ok(mock::library().playlist_summaries());
+    }
+    if !refresh {
+        if let Some(cached) = cache::read::<Vec<PlaylistSummary>>(&app, CacheFile::Playlists) {
+            return Ok(cached);
+        }
+    }
+    let user_id = account_id(&app, &sc).await?;
+    let playlists = sc.playlists(user_id).await?;
+    cache::write(&app, CacheFile::Playlists, &playlists)?;
+    Ok(playlists)
+}
+
+/// Tracks of one playlist, in playlist order.
+#[tauri::command]
+pub async fn get_playlist_tracks(sc: State<'_, SoundCloud>, id: String) -> AppResult<Vec<Track>> {
+    if id.starts_with("mock:") {
+        return mock::library()
+            .playlist_tracks(&id)
+            .ok_or_else(|| AppError::NotFound("playlist".into()));
+    }
+    let numeric = id
+        .strip_prefix("sc-playlist:")
+        .and_then(|n| n.parse::<u64>().ok())
+        .ok_or_else(|| AppError::NotFound("playlist".into()))?;
+    sc.playlist_tracks(numeric).await
+}
+
+#[tauri::command]
+pub fn load_settings(app: AppHandle) -> Settings {
+    settings::load(&app)
+}
+
+#[tauri::command]
+pub fn save_settings(app: AppHandle, settings: Settings) -> AppResult<()> {
+    settings::save(&app, settings)
+}
+
+// ---------------------------------------------------------------------------
+// Playback
+// ---------------------------------------------------------------------------
+
+/// Load and start a track. Resolves once audio has started (or fails with
+/// a readable reason, e.g. a Go+-only track). A newer load cancels this one.
+#[tauri::command]
+pub async fn player_load(
+    sc: State<'_, SoundCloud>,
+    player: State<'_, Player>,
+    track_id: String,
+    duration_ms: u64,
+    fade_ms: u64,
+) -> AppResult<()> {
+    let fade = Duration::from_millis(fade_ms.min(12_000));
+    let generation = player.begin_load(&track_id, fade);
+    match load_source(&sc, &player, generation, &track_id, duration_ms).await {
+        Ok(Some(source)) => {
+            player.play(generation, source, fade);
+            Ok(())
+        }
+        // Superseded by a newer load: nothing to report.
+        Ok(None) => Ok(()),
+        Err(e) => {
+            player.fail(generation, e.to_string());
+            if player.is_current(generation) {
+                Err(e)
+            } else {
+                Ok(())
+            }
+        }
+    }
+}
+
+fn numeric_track_id(track_id: &str) -> AppResult<u64> {
+    track_id
+        .strip_prefix("sc:")
+        .and_then(|n| n.parse::<u64>().ok())
+        .ok_or_else(|| AppError::NotFound("track".into()))
+}
+
+/// Resolve a track's stream and start downloading it in the background.
+async fn start_download(
+    sc: &SoundCloud,
+    track_id: &str,
+) -> AppResult<(StreamKind, Arc<SharedBuffer>)> {
+    let (kind, url) = sc.resolve_stream(numeric_track_id(track_id)?).await?;
+    let buffer = SharedBuffer::new();
+    tauri::async_runtime::spawn(stream::download(sc.http(), kind, url, Arc::clone(&buffer)));
+    Ok((kind, buffer))
+}
+
+async fn load_source(
+    sc: &SoundCloud,
+    player: &Player,
+    generation: u64,
+    track_id: &str,
+    duration_ms: u64,
+) -> AppResult<Option<BoxedSource>> {
+    if track_id.starts_with("mock:") {
+        // Sample library: silence for the track's length (nothing to stream).
+        let silence = rodio::source::Zero::<i16>::new(2, 44_100)
+            .take_duration(Duration::from_millis(duration_ms.max(1_000)));
+        return Ok(Some(Box::new(silence)));
+    }
+    // Use the preloaded stream if this is the track we downloaded ahead.
+    let (kind, buffer) = match player.take_preloaded(track_id) {
+        Some(p) => (p.kind, p.buffer),
+        None => {
+            let (kind, buffer) = start_download(sc, track_id).await?;
+            if !player.is_current(generation) {
+                buffer.cancel();
+                return Ok(None);
+            }
+            (kind, buffer)
+        }
+    };
+    player.attach_buffer(generation, Arc::clone(&buffer));
+
+    // MP3 can start after a short buffer. Fragmented-MP4 (AAC) streams must
+    // be complete first: symphonia's MP4 reader needs the total length.
+    let waiter = Arc::clone(&buffer);
+    let ready = tauri::async_runtime::spawn_blocking(move || match kind {
+        StreamKind::HlsAac => waiter.wait_until_complete(),
+        StreamKind::ProgressiveMp3 | StreamKind::HlsMp3 => waiter.wait_for(START_BUFFER_BYTES),
+    })
+    .await?;
+    if !player.is_current(generation) {
+        return Ok(None);
+    }
+    if !ready {
+        return Err(AppError::Network(
+            "the audio stream couldn't be downloaded".into(),
+        ));
+    }
+
+    let reader = buffer.reader();
+    let extension = match kind {
+        StreamKind::HlsAac => "mp4",
+        StreamKind::ProgressiveMp3 | StreamKind::HlsMp3 => "mp3",
+    };
+    let opened =
+        tauri::async_runtime::spawn_blocking(move || StreamDecoder::open(reader, extension))
+            .await?;
+    let decoder = opened.map_err(|e| {
+        AppError::Api(format!(
+            "This track couldn't be decoded: {e} [format: {kind:?}, starts with: {}].",
+            buffer.head_hex(12)
+        ))
+    })?;
+    if !player.is_current(generation) {
+        return Ok(None);
+    }
+    Ok(Some(Box::new(decoder)))
+}
+
+#[tauri::command]
+pub fn player_pause(player: State<'_, Player>) {
+    player.pause();
+}
+
+#[tauri::command]
+pub fn player_resume(player: State<'_, Player>) {
+    player.resume();
+}
+
+#[tauri::command]
+pub fn player_seek(player: State<'_, Player>, position_ms: u64) {
+    player.seek(Duration::from_millis(position_ms));
+}
+
+#[tauri::command]
+pub fn player_set_volume(player: State<'_, Player>, volume: f32) {
+    player.set_volume(volume);
+}
+
+#[tauri::command]
+pub fn player_stop(player: State<'_, Player>) {
+    player.stop();
+}
+
+#[tauri::command]
+pub fn player_status(player: State<'_, Player>) -> PlayerStatus {
+    player.status()
+}
+
+// ---------------------------------------------------------------------------
+// Recently played
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub fn load_history(app: AppHandle) -> Vec<Track> {
+    history::load(&app)
+}
+
+#[tauri::command]
+pub fn save_history(app: AppHandle, tracks: Vec<Track>) -> AppResult<()> {
+    history::save(&app, tracks)
+}
+
+// ---------------------------------------------------------------------------
+// Windows media controls
+// ---------------------------------------------------------------------------
+
+/// Update the Windows "now playing" card (volume flyout / lock screen).
+#[tauri::command]
+pub fn media_update(
+    app: AppHandle,
+    title: String,
+    artist: String,
+    artwork_url: Option<String>,
+    duration_ms: u64,
+    state: String,
+) {
+    crate::media::update(
+        &app,
+        crate::media::NowPlaying {
+            title,
+            artist,
+            artwork_url,
+            duration_ms,
+            state,
+        },
+    );
+}
+
+/// Start downloading the upcoming track so it can start instantly.
+#[tauri::command]
+pub async fn player_preload(
+    sc: State<'_, SoundCloud>,
+    player: State<'_, Player>,
+    track_id: String,
+) -> AppResult<()> {
+    if track_id.starts_with("mock:") || player.is_preloaded(&track_id) {
+        return Ok(());
+    }
+    let (kind, buffer) = start_download(&sc, &track_id).await?;
+    player.set_preloaded(Preloaded {
+        track_id,
+        kind,
+        buffer,
+    });
+    Ok(())
+}
+
+#[tauri::command]
+pub fn player_set_dsp(
+    player: State<'_, Player>,
+    eq_enabled: bool,
+    eq_gains: Vec<f32>,
+    normalize: bool,
+) {
+    let mut gains = [0.0f32; 10];
+    for (slot, g) in gains.iter_mut().zip(eq_gains) {
+        *slot = if g.is_finite() {
+            g.clamp(-12.0, 12.0)
+        } else {
+            0.0
+        };
+    }
+    player.dsp.set(DspSettings {
+        eq_enabled,
+        eq_gains: gains,
+        normalize,
+    });
+}
+
+/// Visualizer bar heights (0..1).
+#[tauri::command]
+pub fn player_spectrum(player: State<'_, Player>, bars: usize) -> Vec<f32> {
+    player.dsp.spectrum(bars)
+}
+
+// ---------------------------------------------------------------------------
+// Likes, autoplay, links, session
+// ---------------------------------------------------------------------------
+
+/// Like or unlike a track on SoundCloud, then update the cached likes.
+#[tauri::command]
+pub async fn like_track(
+    app: AppHandle,
+    sc: State<'_, SoundCloud>,
+    track: Track,
+    like: bool,
+) -> AppResult<()> {
+    if !sc.has_token() {
+        return Err(AppError::Auth("Sign in to like tracks.".into()));
+    }
+    let user_id = account_id(&app, &sc).await?;
+    sc.set_like(user_id, numeric_track_id(&track.id)?, like)
+        .await?;
+
+    let mut likes = cache::read::<Vec<Track>>(&app, CacheFile::Likes).unwrap_or_default();
+    likes.retain(|t| t.id != track.id);
+    if like {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as i64)
+            .ok();
+        likes.insert(
+            0,
+            Track {
+                liked_at_ms: now,
+                ..track
+            },
+        );
+    }
+    cache::write(&app, CacheFile::Likes, &likes)?;
+    Ok(())
+}
+
+/// Similar tracks for autoplay (empty for the sample library).
+#[tauri::command]
+pub async fn get_related_tracks(
+    sc: State<'_, SoundCloud>,
+    track_id: String,
+) -> AppResult<Vec<Track>> {
+    if !sc.has_token() || !track_id.starts_with("sc:") {
+        return Ok(Vec::new());
+    }
+    sc.related_tracks(numeric_track_id(&track_id)?).await
+}
+
+/// Open a soundcloud.com page in the default browser. Only https links to
+/// soundcloud.com are accepted.
+#[tauri::command]
+pub fn open_on_soundcloud(app: AppHandle, url: String) -> AppResult<()> {
+    let parsed = url::Url::parse(&url)?;
+    let host_ok = matches!(
+        parsed.host_str(),
+        Some("soundcloud.com" | "www.soundcloud.com" | "m.soundcloud.com")
+    );
+    if parsed.scheme() != "https" || !host_ok {
+        return Err(AppError::Api(
+            "Only soundcloud.com links can be opened.".into(),
+        ));
+    }
+    app.opener()
+        .open_url(parsed.as_str(), None::<&str>)
+        .map_err(|e| AppError::Api(format!("Couldn't open the browser ({e}).")))
+}
+
+/// Download a track the artist has made downloadable, using SoundCloud's
+/// own download link. The file is handed to your default browser, which
+/// saves it like any other download; this app never writes it anywhere.
+/// Falls back to the track's SoundCloud page (which has the download button).
+#[tauri::command]
+pub async fn download_track(
+    app: AppHandle,
+    sc: State<'_, SoundCloud>,
+    track_id: String,
+    permalink_url: Option<String>,
+) -> AppResult<()> {
+    if !sc.has_token() {
+        return Err(AppError::Auth("Sign in to download tracks.".into()));
+    }
+    let link = sc
+        .download_url(numeric_track_id(&track_id)?)
+        .await
+        .ok()
+        .flatten();
+    if let Some(link) = link {
+        let parsed = url::Url::parse(&link)?;
+        let host = parsed.host_str().unwrap_or_default();
+        let trusted = ["sndcdn.com", "soundcloud.com", "soundcloud.cloud"]
+            .iter()
+            .any(|d| host == *d || host.ends_with(&format!(".{d}")));
+        if parsed.scheme() == "https" && trusted {
+            return app
+                .opener()
+                .open_url(parsed.as_str(), None::<&str>)
+                .map_err(|e| AppError::Api(format!("Couldn't open the browser ({e}).")));
+        }
+    }
+    match permalink_url {
+        Some(url) => open_on_soundcloud(app, url),
+        None => Err(AppError::Api(
+            "SoundCloud didn't offer a download for this track.".into(),
+        )),
+    }
+}
+
+/// Show (or clear, with `null`) the Discord "Listening to" status.
+#[tauri::command]
+pub fn discord_presence(presence: Option<crate::discord::Presence>) {
+    crate::discord::set(presence);
+}
+
+/// Whether a Discord application id is set (the feature is available).
+#[tauri::command]
+pub fn discord_available() -> bool {
+    !crate::discord::DISCORD_APP_ID.is_empty()
+}
+
+#[tauri::command]
+pub fn load_session(app: AppHandle) -> Session {
+    session::load(&app)
+}
+
+#[tauri::command]
+pub fn save_session(app: AppHandle, session: Session) -> AppResult<()> {
+    session::save(&app, session)
+}
