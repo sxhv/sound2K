@@ -1,6 +1,6 @@
 # Builds the Windows installer on GitHub's servers and attaches it to a
-# draft Release. Runs when you push a version tag (e.g. v0.2.0), or by hand
-# from the Actions tab. Signs the update with the TAURI_SIGNING_PRIVATE_KEY
+# draft Release named after the app version (e.g. v0.2.0). Start it with the
+# "Run workflow" button in the Actions tab, or by pushing a version tag. Signs the update with the TAURI_SIGNING_PRIVATE_KEY
 # secret so installed copies can update themselves (latest.json).
 name: Release
 
@@ -39,8 +39,10 @@ jobs:
         with:
           # Updater files are only built here (local builds don't need the key).
           args: '--config {"bundle":{"createUpdaterArtifacts":true}}'
-          tagName: ${{ github.ref_name }}
-          releaseName: "Sound2K ${{ github.ref_name }}"
+          # __VERSION__ = the version in tauri.conf.json; the tag is created
+          # when you publish the release.
+          tagName: v__VERSION__
+          releaseName: "Sound2K v__VERSION__"
           releaseBody: "Download **Sound2K_…_x64-setup.exe** below and run it. Installs for your user only (no admin needed)."
           releaseDraft: true
           prerelease: false

@@ -110,14 +110,9 @@ The installer appears in `src-tauri\target\release\bundle\nsis\`. Rust unit test
 <details>
 <summary><b>Releasing an update</b></summary>
 
-1. Bump the version in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`.
-2. Commit, tag and push:
-   ```powershell
-   git commit -am "Sound2K 0.2.0"
-   git tag v0.2.0
-   git push; git push --tags
-   ```
-3. GitHub Actions builds and **signs** the installer (~15 min) and creates a **draft** release. Check it under *Releases* and press **Publish**. Installed copies then offer *Update & restart*.
+1. Bump the version in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`, then commit and push.
+2. On GitHub: **Actions → Release → Run workflow**. (Pushing a tag like `v0.2.0` also works.)
+3. It builds and **signs** the installer (~15 min) and creates a **draft** release named after the version. Check it under *Releases* and press **Publish**. Installed copies then offer *Update & restart*.
 
 Signing needs two repository secrets (*Settings → Secrets and variables → Actions*): `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Keep the private key safe: if it's lost, existing installs can't be updated; if it leaks, someone could sign fake updates.
 
