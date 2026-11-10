@@ -26,10 +26,10 @@
   --orange: var(--accent);
   --tangerine: var(--accent-light);
   --deep-orange: var(--accent-dark);
-  --burnt: #33160d;
-  --bg: #17110f;
-  --warm-white: #fff2e8;
-  --on-accent: #2a0d00; /* dark text on the accent */
+  --burnt: #1d1d21;
+  --bg: color-mix(in srgb, #111113 94%, var(--accent-dark));
+  --warm-white: #f4f2f1;
+  --on-accent: #121212; /* dark text on the accent */
   --accent-pale: color-mix(in srgb, var(--accent-light) 50%, #fff);
   --accent-deep: color-mix(in srgb, var(--accent-dark) 55%, #000);
   color-scheme: dark;
@@ -42,17 +42,17 @@
 :root,
 [data-theme="orange-glass"] {
   --text: var(--warm-white);
-  --muted: #d4b4a0;
-  --faint: rgba(255, 242, 232, 0.5);
+  --muted: #c4c0bd;
+  --faint: rgba(244, 242, 241, 0.5);
 
   --app-bg:
     radial-gradient(90% 55% at 12% -8%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 62%),
     radial-gradient(60% 45% at 100% 0%, color-mix(in srgb, var(--accent-light) 16%, transparent), transparent 60%),
     radial-gradient(80% 55% at 50% 112%, color-mix(in srgb, var(--accent-dark) 26%, transparent), transparent 62%),
-    linear-gradient(180deg, #1d1411 0%, var(--bg) 100%);
+    linear-gradient(180deg, color-mix(in srgb, #161618 92%, var(--accent)) 0%, var(--bg) 100%);
 
   --panel-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.035));
-  --panel-solid: rgba(40, 22, 15, 0.92);
+  --panel-solid: color-mix(in srgb, #18181b 92%, var(--accent));
   --panel-border: color-mix(in srgb, var(--accent-light) 24%, transparent);
   --panel-blur: blur(16px) saturate(150%);
   --panel-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.12);
@@ -80,20 +80,20 @@
 }
 
 [data-theme="dark-orange"] {
-  --text: #fbf3ee;
-  --muted: #dcc8bb;
-  --faint: rgba(251, 243, 238, 0.55);
+  --text: #f4f2f1;
+  --muted: #c9c5c2;
+  --faint: rgba(244, 242, 241, 0.55);
 
-  --app-bg: #131110;
-  --panel-bg: #1c1917;
-  --panel-solid: #1f1b19;
-  --panel-border: #332c28;
+  --app-bg: #111113;
+  --panel-bg: #19191c;
+  --panel-solid: color-mix(in srgb, #1b1b1e 95%, var(--accent));
+  --panel-border: #2d2d32;
   --panel-blur: none;
   --panel-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
 
-  --btn-bg: #272220;
-  --btn-bg-hover: #322b28;
-  --btn-border: #403632;
+  --btn-bg: #242428;
+  --btn-bg-hover: #2f2f34;
+  --btn-border: #3a3a40;
   --btn-shadow: none;
 
   --accent-bg: var(--orange);
@@ -101,10 +101,10 @@
   --glow: none;
   --glow-soft: none;
 
-  --field-bg: #100e0d;
-  --field-border: #3a322e;
+  --field-bg: #0e0e10;
+  --field-border: #35353a;
 
-  --row-hover: #1f1b19;
+  --row-hover: #1b1b1e;
   --row-selected: color-mix(in srgb, var(--accent) 16%, transparent);
   --row-selected-border: color-mix(in srgb, var(--accent) 60%, transparent);
 

@@ -181,16 +181,18 @@ export class HomeView {
   private section(title: string, cards: HTMLElement[], opts: { subtitle?: string; seeAll?: () => void; play?: () => void } = {}): HTMLElement {
     const row = h("div", { class: "home-row", attrs: { role: "list" } }, cards);
     const scrollBy = (dir: number): void => row.scrollBy({ left: dir * row.clientWidth * 0.85, behavior: "smooth" });
+    // The title is the "See all" link (Apple Music style); arrows show on hover.
+    const heading = opts.seeAll
+      ? h("button", { class: "home-section-title is-link", attrs: { type: "button", title: "See all" } }, [h("span", { text: title }), icon("chevron")])
+      : h("h2", { class: "home-section-title", text: title });
+    if (opts.seeAll) heading.addEventListener("click", opts.seeAll);
     const head = h("div", { class: "home-section-head" }, [
-      h("div", { class: "home-section-titles" }, [
-        h("h2", { text: title }),
-        ...(opts.subtitle ? [h("span", { class: "home-section-sub", text: opts.subtitle })] : []),
-      ]),
+      h("div", { class: "home-section-titles" }, [heading, ...(opts.subtitle ? [h("span", { class: "home-section-sub", text: opts.subtitle })] : [])]),
       h("div", { class: "spacer" }),
-      ...(opts.play ? [button({ label: "Play all", icon: "play", class: "glass-btn icon-only small", onClick: opts.play })] : []),
-      ...(opts.seeAll ? [button({ label: "See all", text: "See all", class: "link-btn", onClick: opts.seeAll })] : []),
-      button({ label: "Scroll left", icon: "back", class: "glass-btn icon-only small row-arrow", onClick: () => scrollBy(-1) }),
-      button({ label: "Scroll right", icon: "back", class: "glass-btn icon-only small row-arrow is-right", onClick: () => scrollBy(1) }),
+      h("div", { class: "row-arrows" }, [
+        button({ label: "Scroll left", icon: "back", class: "row-arrow", onClick: () => scrollBy(-1) }),
+        button({ label: "Scroll right", icon: "back", class: "row-arrow is-right", onClick: () => scrollBy(1) }),
+      ]),
     ]);
     return h("section", { class: "home-section", attrs: { "data-key": title } }, [head, row]);
   }
