@@ -273,6 +273,7 @@ export class TopBar {
       toggle("Visualizer", s.visualizer, (on) => this.store.set({ visualizer: on })),
       toggle("Artwork colours", s.artBackgrounds, (on) => this.store.set({ artBackgrounds: on })),
       toggle("Cat mascot", s.mascot, (on) => this.store.set({ mascot: on })),
+      toggle("Beat glow", s.aura, (on) => this.store.set({ aura: on })),
       ...(this.discordAvailable ? this.buildDiscordSetting(toggle) : []),
     ];
   }

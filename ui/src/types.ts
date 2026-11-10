@@ -89,6 +89,8 @@ export interface Settings {
   artBackgrounds: boolean;
   /** Show the animated cat. */
   mascot: boolean;
+  /** Glow around the window edges on drum hits. */
+  aura: boolean;
   /** Show "Listening to …" on Discord. */
   discordStatus: boolean;
   /** Look for a newer version on GitHub at startup. */

@@ -1293,7 +1293,7 @@
   display: none;
 }
 
-html.is-mini .app > :not(.mini-player) {
+html.is-mini .app > :not(.mini-player, .beat-aura) {
   display: none !important;
 }
 
@@ -4257,4 +4257,35 @@ button.home-card {
   width: 38px;
   height: 38px;
   border-radius: 6px;
+}
+
+/* ===== Beat glow: window edges pulse on drum hits ===== */
+.beat-aura {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  overflow: hidden;
+}
+.beat-aura[hidden] {
+  display: none;
+}
+.beat-aura-flash {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  will-change: opacity;
+  box-shadow:
+    inset 0 0 0 2px color-mix(in srgb, var(--accent-light) 85%, transparent),
+    inset 0 0 18px 2px color-mix(in srgb, var(--accent-light) 70%, transparent),
+    inset 0 0 70px 8px color-mix(in srgb, var(--accent) 55%, transparent),
+    inset 0 0 160px 20px color-mix(in srgb, var(--accent) 22%, transparent);
+  mix-blend-mode: screen;
+}
+/* The mini-player is small: a tighter glow. */
+.is-mini .beat-aura-flash {
+  box-shadow:
+    inset 0 0 0 2px color-mix(in srgb, var(--accent-light) 85%, transparent),
+    inset 0 0 14px 2px color-mix(in srgb, var(--accent-light) 65%, transparent),
+    inset 0 0 40px 4px color-mix(in srgb, var(--accent) 45%, transparent);
 }

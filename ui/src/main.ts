@@ -31,6 +31,7 @@ function settingsOf(s: AppState): Settings {
     autoplay: s.autoplay,
     artBackgrounds: s.artBackgrounds,
     mascot: s.mascot,
+    aura: s.aura,
     discordStatus: s.discordStatus,
     updateCheck: s.updateCheck,
   };

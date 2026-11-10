@@ -114,6 +114,7 @@ export interface AppState {
   autoplay: boolean;
   artBackgrounds: boolean;
   mascot: boolean;
+  aura: boolean;
   discordStatus: boolean;
   updateCheck: boolean;
   /** Set when a newer version was found. */
@@ -161,6 +162,7 @@ export const DEFAULT_SETTINGS: Settings = {
   autoplay: true,
   artBackgrounds: true,
   mascot: true,
+  aura: true,
   discordStatus: false,
   updateCheck: true,
 };
@@ -195,6 +197,7 @@ export function createInitialState(settings: Settings): AppState {
     autoplay: settings.autoplay ?? DEFAULT_SETTINGS.autoplay,
     artBackgrounds: settings.artBackgrounds ?? DEFAULT_SETTINGS.artBackgrounds,
     mascot: settings.mascot ?? DEFAULT_SETTINGS.mascot,
+    aura: settings.aura ?? DEFAULT_SETTINGS.aura,
     discordStatus: settings.discordStatus ?? DEFAULT_SETTINGS.discordStatus,
     updateCheck: settings.updateCheck ?? DEFAULT_SETTINGS.updateCheck,
     update: null,

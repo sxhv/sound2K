@@ -44,6 +44,7 @@ export class Visualizer {
       !prev ||
       s.visualizer !== prev.visualizer ||
       s.mascot !== prev.mascot ||
+      s.aura !== prev.aura ||
       s.player.playing !== prev.player.playing ||
       s.player.current !== prev.player.current
     ) {
@@ -53,7 +54,7 @@ export class Visualizer {
 
   private sync(s: AppState): void {
     // Levels are also fetched for the mascot even when the bars are hidden.
-    this.active = (s.visualizer || s.mascot) && s.player.playing && s.player.current !== null && !document.hidden;
+    this.active = (s.visualizer || s.mascot || s.aura) && s.player.playing && s.player.current !== null && !document.hidden;
     for (const c of this.canvases) c.hidden = !s.visualizer;
     // When inactive, the loop keeps running only until the bars fall to zero.
     if (!this.running && (this.active || this.levels.some((v) => v > 0))) {

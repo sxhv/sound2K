@@ -7,6 +7,9 @@
   Colours that follow every song, a mini-player that stays out of your games, and a cat that dances along.
 </p>
 
+> [!NOTE]
+> **Made with AI.** Sound2K was built with the help of AI (Claude by Anthropic): the code was written by AI from my ideas, testing and feedback. I don't consider myself a developer or a programmer, and I don't consider "vibe coding" real development. Please keep that in mind before using the app or the code.
+
 <p align="center">
   <img alt="Windows 10/11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6">
   <img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB">
@@ -34,6 +37,7 @@
 - **Now Playing** full-window view with big artwork on a blurred backdrop
 - Apple Music-style touches: playlist headers, slide-out queue, springy buttons, scrolling titles
 - **Glass** and **Dark** themes, plus a live **visualizer**
+- **Beat glow:** the window edges pulse in the song's colour on every drum hit (turn it off in Settings)
 - **The cat** 🐱: dances to the bass, naps when you pause, throws hearts when you like a song
 
 **🎮 Made for gaming**

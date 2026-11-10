@@ -15,6 +15,7 @@ import { Toolbar } from "./components/toolbar";
 import { api } from "./api";
 import { MiniPlayer } from "./components/miniPlayer";
 import { Visualizer } from "./components/visualizer";
+import { BeatAura } from "./components/beatAura";
 import { closePopover } from "./components/popover";
 import { toast } from "./components/toast";
 import { TopBar } from "./components/topBar";
@@ -78,8 +79,10 @@ export function mountApp(root: HTMLElement, store: AppStore, player: Player, ver
   const soundPage = new SoundPage(store);
   const artistPage = new ArtistPage(store, player);
   const pages = h("div", { class: "pages" }, [eqPage.el, soundPage.el, artistPage.el]);
+  // Glow around the window edges on drum hits (on top of everything, click-through).
+  const aura = new BeatAura(visualizer);
 
-  root.replaceChildren(backdrop.el, topBar.el, tabs.el, toolbar.el, content, pages, dock.el, nowPlaying.el, drawer.el, mini.el);
+  root.replaceChildren(backdrop.el, topBar.el, tabs.el, toolbar.el, content, pages, dock.el, nowPlaying.el, drawer.el, mini.el, aura.el);
 
   // Overlays sit below the custom title bar, so the window buttons stay usable.
   new ResizeObserver(() => {
@@ -206,6 +209,7 @@ export function mountApp(root: HTMLElement, store: AppStore, player: Player, ver
     dock.update(s, prev);
     nowPlaying.update(s, prev);
     drawer.update(s, prev);
+    aura.update(s, prev);
   };
   store.subscribe(render);
   render(store.get(), null);
