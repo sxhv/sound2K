@@ -3,7 +3,7 @@
 //! or partial response degrades gracefully instead of failing.
 
 use super::time::parse_iso_ms;
-use crate::library::models::{Account, PlaylistSummary, Track};
+use crate::library::models::{Account, Artist, FeedItem, PlaylistSummary, Track};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -182,6 +182,7 @@ impl ApiTrack {
             .as_ref()
             .is_some_and(|m| pick_transcoding(&m.transcodings).is_some());
         let playable = self.streamable != Some(false) && policy_ok && has_streams;
+        let artist_id = self.user.as_ref().map(|u| u.id);
         let (artist, avatar) = match self.user {
             Some(u) => (u.username.unwrap_or_default(), u.avatar_url),
             None => (String::new(), None),
@@ -197,7 +198,90 @@ impl ApiTrack {
             liked_at_ms,
             playable,
             downloadable: self.downloadable == Some(true),
+            artist_id,
         }
+    }
+}
+
+/// Full user profile (artist pages, search results).
+#[derive(Debug, Clone, Deserialize)]
+pub struct ApiUserFull {
+    pub id: u64,
+    #[serde(default)]
+    pub username: Option<String>,
+    #[serde(default)]
+    pub avatar_url: Option<String>,
+    #[serde(default)]
+    pub permalink_url: Option<String>,
+    #[serde(default)]
+    pub city: Option<String>,
+    #[serde(default)]
+    pub followers_count: Option<u64>,
+    #[serde(default)]
+    pub track_count: Option<u64>,
+    #[serde(default)]
+    pub visuals: Option<ApiVisuals>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ApiVisuals {
+    #[serde(default)]
+    pub visuals: Vec<ApiVisual>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ApiVisual {
+    #[serde(default)]
+    pub visual_url: Option<String>,
+}
+
+impl ApiUserFull {
+    pub fn into_artist(self, following: Option<bool>) -> Artist {
+        Artist {
+            id: self.id,
+            username: self.username.unwrap_or_default(),
+            // Ask for a bigger avatar than the default 100 px.
+            avatar_url: self.avatar_url.map(|u| u.replace("-large.", "-t500x500.")),
+            banner_url: self
+                .visuals
+                .and_then(|v| v.visuals.into_iter().find_map(|x| x.visual_url)),
+            permalink_url: self.permalink_url,
+            city: self.city.filter(|c| !c.is_empty()),
+            followers: self.followers_count.unwrap_or(0),
+            track_count: self.track_count.unwrap_or(0),
+            following,
+        }
+    }
+}
+
+/// An item in the home feed or an artist's reposts.
+#[derive(Debug, Deserialize)]
+pub struct ApiStreamItem {
+    #[serde(default, rename = "type")]
+    pub kind: Option<String>,
+    #[serde(default)]
+    pub created_at: Option<String>,
+    #[serde(default)]
+    pub track: Option<ApiTrack>,
+    /// Who posted / reposted it.
+    #[serde(default)]
+    pub user: Option<ApiUser>,
+}
+
+impl ApiStreamItem {
+    /// Track items only (playlists in the feed are skipped for now).
+    pub fn into_feed_item(self) -> Option<FeedItem> {
+        let track = self.track.filter(|t| !t.is_stub())?;
+        let is_repost = self.kind.as_deref().is_some_and(|k| k.contains("repost"));
+        Some(FeedItem {
+            reposted_by: if is_repost {
+                self.user.and_then(|u| u.username)
+            } else {
+                None
+            },
+            at_ms: self.created_at.as_deref().and_then(parse_iso_ms),
+            track: track.into_track(None),
+        })
     }
 }
 

@@ -1,5 +1,4 @@
-import { api } from "../api";
-import { toast } from "../components/toast";
+import { openPlaylist } from "../browse";
 import { TrackListPanel } from "../components/trackListPanel";
 import { button, h } from "../lib/dom";
 import { icon } from "../lib/icons";
@@ -12,7 +11,7 @@ import type { Player } from "../player/player";
 import type { AppState, AppStore } from "../state";
 import type { PlaylistSummary } from "../types";
 
-function playlistArt(p: PlaylistSummary): HTMLElement {
+export function playlistArt(p: PlaylistSummary): HTMLElement {
   const art = h("div", { class: "art art-playlist", attrs: { "aria-hidden": "true" } });
   art.style.background = placeholderGradient(p.id);
   const src = artUrl(p.artworkUrl, "t300x300");
@@ -130,19 +129,9 @@ export class PlaylistsView {
   }
 
   private open(p: PlaylistSummary): void {
-    this.store.set({ openPlaylist: { summary: p, tracks: [], loading: true }, search: "", selectedId: null });
-    const stillOpen = (): boolean => this.store.get().openPlaylist?.summary.id === p.id;
-    api
-      .playlistTracks(p.id)
-      .then((tracks) => {
-        if (stillOpen()) this.store.set({ openPlaylist: { summary: p, tracks, loading: false } });
-      })
-      .catch((err: unknown) => {
-        console.error(err);
-        toast(`Couldn't load “${p.title}”.`, "error");
-        if (stillOpen()) this.store.set({ openPlaylist: { summary: p, tracks: [], loading: false } });
-      });
+    openPlaylist(this.store, p);
   }
+
 
   private renderOverview(s: AppState): void {
     const list = searchPlaylists(s.playlists, s.search);

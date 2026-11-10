@@ -7,6 +7,9 @@ import { accentPalette, artColour } from "./lib/artwork";
 import { Mascot } from "./components/mascot";
 import { EqualizerPage } from "./views/equalizerPage";
 import { SoundPage } from "./views/soundPage";
+import { ArtistPage } from "./views/artistPage";
+import { HomeView } from "./views/homeView";
+import { SearchView } from "./views/searchView";
 import { Tabs } from "./components/tabs";
 import { Toolbar } from "./components/toolbar";
 import { api } from "./api";
@@ -43,7 +46,10 @@ export function mountApp(root: HTMLElement, store: AppStore, player: Player, ver
   const visualizer = new Visualizer(store, (bars) => api.spectrum(bars));
   const tabs = new Tabs(store);
   const toolbar = new Toolbar(store);
+  const searchView = new SearchView(store, player);
   const views: Record<TabId, View> = {
+    home: new HomeView(store, player),
+    search: searchView,
     liked: new LikedView(store, player),
     playlists: new PlaylistsView(store, player),
     queue: new QueueView(store, player),
@@ -74,7 +80,8 @@ export function mountApp(root: HTMLElement, store: AppStore, player: Player, ver
 
   const eqPage = new EqualizerPage(store);
   const soundPage = new SoundPage(store);
-  const pages = h("div", { class: "pages" }, [eqPage.el, soundPage.el]);
+  const artistPage = new ArtistPage(store, player);
+  const pages = h("div", { class: "pages" }, [eqPage.el, soundPage.el, artistPage.el]);
 
   root.replaceChildren(backdrop.el, topBar.el, tabs.el, toolbar.el, content, pages, dock.el, nowPlaying.el, drawer.el, mini.el);
 
@@ -188,6 +195,8 @@ export function mountApp(root: HTMLElement, store: AppStore, player: Player, ver
       pages.hidden = library;
       eqPage.el.hidden = s.page !== "equalizer";
       soundPage.el.hidden = s.page !== "sound";
+      artistPage.el.hidden = s.page !== "artist";
+      pages.classList.toggle("is-artist", s.page === "artist");
     }
     if (!prev || s.mascot !== prev.mascot) html.classList.toggle("no-mascot", !s.mascot);
     if (!prev || s.player !== prev.player || s.likedIds !== prev.likedIds) {
@@ -196,6 +205,7 @@ export function mountApp(root: HTMLElement, store: AppStore, player: Player, ver
       miniCat.update(s);
     }
     eqPage.update(s, prev);
+    if (s.page === "artist") artistPage.update(s, prev);
     soundPage.update(s, prev);
     dock.update(s, prev);
     nowPlaying.update(s, prev);
@@ -208,6 +218,7 @@ export function mountApp(root: HTMLElement, store: AppStore, player: Player, ver
     const s = store.get();
     const current = s.player.current;
     if (!current) return;
+    if (s.page === "artist" && !s.nowPlayingOpen && artistPage.jumpToCurrent()) return;
     if (s.nowPlayingOpen || s.page !== "library") store.set({ nowPlayingOpen: false, page: "library" });
     if (views[s.tab].jumpToCurrent?.()) return;
     if (s.likedIds.has(current.id)) {
@@ -216,5 +227,8 @@ export function mountApp(root: HTMLElement, store: AppStore, player: Player, ver
     }
   }
 
-  return { focusSearch: () => toolbar.focusSearch(), jumpToPlaying };
+  return {
+    focusSearch: () => (store.get().tab === "search" && store.get().page === "library" ? searchView.focus() : toolbar.focusSearch()),
+    jumpToPlaying,
+  };
 }

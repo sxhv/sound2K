@@ -13,6 +13,8 @@ export interface RowHandlers {
   play(track: Track, index: number): void;
   menu(track: Track, anchor: HTMLElement, index: number): void;
   toggleLike(track: Track): void;
+  /** Open the artist page (artist name click). */
+  artist?(track: Track): void;
 }
 
 export interface RowState {
@@ -77,10 +79,17 @@ export function buildTrackRow(
   ]);
   if (!track.playable) titleLine.append(h("span", { class: "badge", text: "Unavailable" }));
 
-  const meta = h("div", { class: "track-meta" }, [
-    titleLine,
-    h("span", { class: "track-artist", text: track.artist }),
-  ]);
+  const artistEl = h("span", { class: "track-artist", text: track.artist });
+  if (handlers.artist && track.artist) {
+    artistEl.classList.add("is-link");
+    artistEl.title = `Go to ${track.artist}`;
+    artistEl.addEventListener("click", (e) => {
+      e.stopPropagation();
+      handlers.artist?.(track);
+    });
+    artistEl.addEventListener("dblclick", (e) => e.stopPropagation());
+  }
+  const meta = h("div", { class: "track-meta" }, [titleLine, artistEl]);
 
   const like = h("button", { class: "icon-btn track-like", attrs: { type: "button" } }, [icon("heart")]);
   like.addEventListener("click", (e) => {

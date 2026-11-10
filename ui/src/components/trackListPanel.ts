@@ -11,6 +11,7 @@ import { ROW_HEIGHT, buildTrackRow, decorateRow, rowState, type RowHandlers } fr
 import { VirtualList } from "./virtualList";
 import { catSvg } from "./mascot";
 import { showAddToPlaylist } from "../playlistEdit";
+import { openArtistOf } from "../browse";
 
 const EMPTY: readonly Track[] = [];
 
@@ -20,6 +21,8 @@ export interface PanelOptions {
   emptyText(s: AppState): string;
   /** Sort + filter controls apply (search always applies). */
   filtersEnabled: boolean;
+  /** Called when scrolled near the end (load the next page). */
+  onNearEnd?(): void;
   /** Extra ⋯ menu items (e.g. "Remove from this playlist"). */
   extraMenu?(t: Track): MenuItem[];
 }
@@ -47,6 +50,7 @@ export class TrackListPanel {
           ...(opts.extraMenu?.(t) ?? []),
         ]),
       toggleLike: (t) => void toggleLike(store, t),
+      artist: (t) => openArtistOf(store, t),
     };
     this.list = new VirtualList<Track>(
       ROW_HEIGHT,
@@ -58,7 +62,15 @@ export class TrackListPanel {
     this.empty.hidden = true;
     this.jumpBtn = button({ label: "Jump to the playing song (Ctrl+J)", icon: "locate", text: "Now playing", class: "jump-btn", onClick: () => this.jumpToCurrent() });
     this.jumpBtn.hidden = true;
-    this.list.el.addEventListener("scroll", () => this.updateJump(), { passive: true });
+    this.list.el.addEventListener(
+      "scroll",
+      () => {
+        this.updateJump();
+        const el = this.list.el;
+        if (opts.onNearEnd && el.scrollTop + el.clientHeight > el.scrollHeight - 400) opts.onNearEnd();
+      },
+      { passive: true },
+    );
     this.el = h("div", { class: "track-panel" }, [this.list.el, this.empty, this.jumpBtn]);
   }
 
@@ -147,6 +159,6 @@ export function trackMenu(store: AppStore, player: Player, t: Track, play: () =>
     ...(anchor && t.id.startsWith("sc:") ? [{ label: "Add to playlist…", action: () => showAddToPlaylist(store, anchor, t) }] : []),
     ...(t.downloadable ? [{ label: "Download", action: () => downloadTrack(store, t) }] : []),
     { label: "Open on SoundCloud", action: () => openOnSoundCloud(t.permalinkUrl), disabled: !t.permalinkUrl },
-    { label: "Go to artist on SoundCloud", action: () => openOnSoundCloud(artistUrl(t)), disabled: !artistUrl(t) },
+    { label: "Go to artist", action: () => openArtistOf(store, t), disabled: !t.artistId && !artistUrl(t) },
   ];
 }

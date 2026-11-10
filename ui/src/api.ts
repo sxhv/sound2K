@@ -1,7 +1,7 @@
 // Typed wrappers around the Rust commands registered in src-tauri/src/lib.rs.
 // (Playback commands live in player/tauriTransport.ts.)
 import { invoke } from "@tauri-apps/api/core";
-import type { Account, AppInfo, DiscordPresence, PlaylistSummary, Session, Settings, StorageInfo, Track, UpdateInfo } from "./types";
+import type { Account, AppInfo, Artist, FeedItem, Paged, DiscordPresence, PlaylistSummary, Session, Settings, StorageInfo, Track, UpdateInfo } from "./types";
 
 export { errorKind, errorMessage } from "./lib/errors";
 
@@ -26,9 +26,19 @@ export const api = {
   deletePlaylist: (playlistId: string) => invoke<void>("delete_playlist", { playlistId }),
   discordPresence: (presence: DiscordPresence | null) => invoke<void>("discord_presence", { presence }),
   discordAvailable: () => invoke<boolean>("discord_available"),
+  discordStatusText: () => invoke<string>("discord_status_text"),
   checkForUpdate: () => invoke<UpdateInfo>("check_for_update"),
   openUpdatePage: (url: string) => invoke<void>("open_update_page", { url }),
   installUpdate: () => invoke<void>("install_update"),
+  searchTracks: (q: string, next: string | null) => invoke<Paged<Track>>("search_tracks", { q, next }),
+  searchArtists: (q: string, next: string | null) => invoke<Paged<Artist>>("search_artists", { q, next }),
+  searchPlaylists: (q: string, next: string | null) => invoke<Paged<PlaylistSummary>>("search_playlists", { q, next }),
+  getArtist: (id: number | null, profileUrl: string | null) => invoke<Artist>("get_artist", { id, profileUrl }),
+  getArtistTracks: (id: number, section: string, next: string | null) =>
+    invoke<Paged<Track>>("get_artist_tracks", { id, section, next }),
+  getArtistPlaylists: (id: number) => invoke<PlaylistSummary[]>("get_artist_playlists", { id }),
+  getFeed: (next: string | null) => invoke<Paged<FeedItem>>("get_feed", { next }),
+  followArtist: (id: number, follow: boolean) => invoke<void>("follow_artist", { id, follow }),
   downloadTrack: (trackId: string, permalinkUrl: string | null) => invoke<void>("download_track", { trackId, permalinkUrl }),
   relatedTracks: (trackId: string) => invoke<Track[]>("get_related_tracks", { trackId }),
   openOnSoundCloud: (url: string) => invoke<void>("open_on_soundcloud", { url }),

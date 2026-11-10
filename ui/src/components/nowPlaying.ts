@@ -8,6 +8,7 @@ import type { Player } from "../player/player";
 import type { AppState, AppStore } from "../state";
 import { downloadTrack, openOnSoundCloud, toggleLike } from "../library";
 import { ArtBackdrop } from "./artBackdrop";
+import { openArtistOf } from "../browse";
 import { artwork, swapArt } from "./trackRow";
 
 function setFill(range: HTMLInputElement): void {
@@ -45,6 +46,10 @@ export class NowPlaying {
     this.title = h("div", { class: "np-title" });
     this.title.addEventListener("click", () => openOnSoundCloud(store.get().player.current?.permalinkUrl ?? null));
     this.artist = h("div", { class: "np-artist" });
+    this.artist.addEventListener("click", () => {
+      const t = store.get().player.current;
+      if (t?.artist) openArtistOf(store, t);
+    });
     this.likeBtn = button({
       label: "Like",
       icon: "heart",

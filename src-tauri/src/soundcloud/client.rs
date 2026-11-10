@@ -1,9 +1,9 @@
 use super::api_types::{
-    rank_transcodings, ApiLike, ApiPlaylist, ApiPlaylistLike, ApiStreamUrl, ApiTrack, ApiUser,
-    Page, StreamKind,
+    rank_transcodings, ApiLike, ApiPlaylist, ApiPlaylistLike, ApiStreamItem, ApiStreamUrl,
+    ApiTrack, ApiUser, ApiUserFull, Page, StreamKind,
 };
 use crate::errors::{AppError, AppResult};
-use crate::library::models::{Account, PlaylistSummary, Track};
+use crate::library::models::{Account, Artist, FeedItem, Paged, PlaylistSummary, Track};
 use regex::Regex;
 use reqwest::header::{HeaderValue, ACCEPT, AUTHORIZATION};
 use reqwest::{Method, StatusCode};
@@ -439,6 +439,197 @@ impl SoundCloud {
         }
     }
 
+    // --- Browsing SoundCloud ---------------------------------------------
+
+    /// First page at `first`, or the page at `next` (a `next_href` we got
+    /// from SoundCloud earlier; `request` re-checks its host).
+    async fn page<T: DeserializeOwned>(
+        &self,
+        first: String,
+        next: Option<String>,
+    ) -> AppResult<Page<T>> {
+        self.get_json(&next.unwrap_or(first)).await
+    }
+
+    fn tracks_page(page: Page<ApiTrack>) -> Paged<Track> {
+        Paged {
+            items: page
+                .collection
+                .into_iter()
+                .filter(|t| !t.is_stub())
+                .map(|t| t.into_track(None))
+                .collect(),
+            next: page.next_href,
+        }
+    }
+
+    pub async fn search_tracks(&self, q: &str, next: Option<String>) -> AppResult<Paged<Track>> {
+        let first = format!(
+            "{API_BASE}/search/tracks?q={}&limit=30&linked_partitioning=1",
+            urlencode(q)
+        );
+        Ok(Self::tracks_page(self.page(first, next).await?))
+    }
+
+    pub async fn search_artists(&self, q: &str, next: Option<String>) -> AppResult<Paged<Artist>> {
+        let first = format!(
+            "{API_BASE}/search/users?q={}&limit=30&linked_partitioning=1",
+            urlencode(q)
+        );
+        let page: Page<ApiUserFull> = self.page(first, next).await?;
+        Ok(Paged {
+            items: page
+                .collection
+                .into_iter()
+                .map(|u| u.into_artist(None))
+                .collect(),
+            next: page.next_href,
+        })
+    }
+
+    pub async fn search_playlists(
+        &self,
+        q: &str,
+        next: Option<String>,
+    ) -> AppResult<Paged<PlaylistSummary>> {
+        let first = format!(
+            "{API_BASE}/search/playlists?q={}&limit=30&linked_partitioning=1",
+            urlencode(q)
+        );
+        let page: Page<ApiPlaylist> = self.page(first, next).await?;
+        Ok(Paged {
+            items: page.collection.iter().map(ApiPlaylist::summary).collect(),
+            next: page.next_href,
+        })
+    }
+
+    /// An artist's profile. `following` is filled in when signed in.
+    pub async fn artist(&self, user_id: u64) -> AppResult<Artist> {
+        let user: ApiUserFull = self
+            .get_json(&format!("{API_BASE}/users/{user_id}"))
+            .await?;
+        let following = if self.token().is_some() {
+            self.following_ids()
+                .await
+                .ok()
+                .map(|ids| ids.contains(&user_id))
+        } else {
+            None
+        };
+        Ok(user.into_artist(following))
+    }
+
+    /// Find an artist from their soundcloud.com page address.
+    pub async fn resolve_artist(&self, profile_url: &str) -> AppResult<u64> {
+        let url = Url::parse(profile_url)?;
+        if url.scheme() != "https"
+            || !matches!(
+                url.host_str(),
+                Some("soundcloud.com" | "www.soundcloud.com" | "m.soundcloud.com")
+            )
+        {
+            return Err(AppError::Api("Not a SoundCloud profile address.".into()));
+        }
+        #[derive(serde::Deserialize)]
+        struct Resolved {
+            id: u64,
+            #[serde(default)]
+            kind: Option<String>,
+        }
+        let found: Resolved = self
+            .get_json(&format!(
+                "{API_BASE}/resolve?url={}",
+                urlencode(url.as_str())
+            ))
+            .await?;
+        if found.kind.as_deref() != Some("user") {
+            return Err(AppError::NotFound("artist".into()));
+        }
+        Ok(found.id)
+    }
+
+    /// `section`: "popular", "tracks" or "reposts".
+    pub async fn artist_tracks(
+        &self,
+        user_id: u64,
+        section: &str,
+        next: Option<String>,
+    ) -> AppResult<Paged<Track>> {
+        match section {
+            "popular" => {
+                let first =
+                    format!("{API_BASE}/users/{user_id}/toptracks?limit=20&linked_partitioning=1");
+                Ok(Self::tracks_page(self.page(first, next).await?))
+            }
+            "tracks" => {
+                let first =
+                    format!("{API_BASE}/users/{user_id}/tracks?limit=50&linked_partitioning=1");
+                Ok(Self::tracks_page(self.page(first, next).await?))
+            }
+            "reposts" => {
+                let first = format!(
+                    "{API_BASE}/stream/users/{user_id}/reposts?limit=50&linked_partitioning=1"
+                );
+                let page: Page<ApiStreamItem> = self.page(first, next).await?;
+                Ok(Paged {
+                    items: page
+                        .collection
+                        .into_iter()
+                        .filter_map(|i| i.into_feed_item().map(|f| f.track))
+                        .collect(),
+                    next: page.next_href,
+                })
+            }
+            _ => Err(AppError::Api("Unknown artist section.".into())),
+        }
+    }
+
+    pub async fn artist_playlists(&self, user_id: u64) -> AppResult<Vec<PlaylistSummary>> {
+        let page: Page<ApiPlaylist> = self
+            .get_json(&format!(
+                "{API_BASE}/users/{user_id}/playlists?limit=50&linked_partitioning=1"
+            ))
+            .await?;
+        Ok(page.collection.iter().map(ApiPlaylist::summary).collect())
+    }
+
+    /// Your home feed: uploads and reposts from people you follow.
+    pub async fn feed(&self, next: Option<String>) -> AppResult<Paged<FeedItem>> {
+        let first = format!("{API_BASE}/stream?limit=40&linked_partitioning=1");
+        let page: Page<ApiStreamItem> = self.page(first, next).await?;
+        Ok(Paged {
+            items: page
+                .collection
+                .into_iter()
+                .filter_map(ApiStreamItem::into_feed_item)
+                .collect(),
+            next: page.next_href,
+        })
+    }
+
+    /// Ids of everyone you follow.
+    async fn following_ids(&self) -> AppResult<Vec<u64>> {
+        let ids: Vec<u64> = self
+            .collect_pages(format!(
+                "{API_BASE}/me/followings/ids?limit=5000&linked_partitioning=1"
+            ))
+            .await?;
+        Ok(ids)
+    }
+
+    /// Follow (`true`) or unfollow (`false`) a SoundCloud user.
+    pub async fn set_follow(&self, user_id: u64, follow: bool) -> AppResult<()> {
+        let method = if follow { Method::POST } else { Method::DELETE };
+        match self
+            .request(method, &format!("{API_BASE}/me/followings/{user_id}"))
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(AppError::NotFound(_)) if !follow => Ok(()),
+            Err(e) => Err(e),
+        }
+    }
+
     /// Tracks SoundCloud considers similar (used for autoplay).
     pub async fn related_tracks(&self, track_id: u64) -> AppResult<Vec<Track>> {
         let page: Page<ApiTrack> = self
@@ -528,6 +719,11 @@ impl SoundCloud {
         }
         Ok(items)
     }
+}
+
+/// Percent-encode a query value.
+fn urlencode(s: &str) -> String {
+    url::form_urlencoded::byte_serialize(s.as_bytes()).collect()
 }
 
 /// Prefix an error with the step that failed (auth errors pass through).

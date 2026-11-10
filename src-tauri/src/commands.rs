@@ -9,7 +9,7 @@ use crate::cache::{self, CacheFile};
 use crate::errors::{AppError, AppResult};
 use crate::history;
 use crate::library::mock;
-use crate::library::models::{Account, PlaylistSummary, Track};
+use crate::library::models::{Account, Artist, FeedItem, Paged, PlaylistSummary, Track};
 use crate::player::buffer::SharedBuffer;
 use crate::player::decode::StreamDecoder;
 use crate::player::dsp::DspSettings;
@@ -139,6 +139,96 @@ pub fn clear_cache(app: AppHandle) -> AppResult<()> {
         main.clear_all_browsing_data()?;
     }
     Ok(())
+}
+
+// --- Browsing SoundCloud: search, artists, home feed -----------------------
+
+fn query(q: &str) -> AppResult<&str> {
+    let q = q.trim();
+    if q.is_empty() || q.chars().count() > 200 {
+        return Err(AppError::Api("Type something to search for.".into()));
+    }
+    Ok(q)
+}
+
+#[tauri::command]
+pub async fn search_tracks(
+    sc: State<'_, SoundCloud>,
+    q: String,
+    next: Option<String>,
+) -> AppResult<Paged<Track>> {
+    sc.search_tracks(query(&q)?, next).await
+}
+
+#[tauri::command]
+pub async fn search_artists(
+    sc: State<'_, SoundCloud>,
+    q: String,
+    next: Option<String>,
+) -> AppResult<Paged<Artist>> {
+    sc.search_artists(query(&q)?, next).await
+}
+
+#[tauri::command]
+pub async fn search_playlists(
+    sc: State<'_, SoundCloud>,
+    q: String,
+    next: Option<String>,
+) -> AppResult<Paged<PlaylistSummary>> {
+    sc.search_playlists(query(&q)?, next).await
+}
+
+/// An artist by id, or by their soundcloud.com profile address.
+#[tauri::command]
+pub async fn get_artist(
+    sc: State<'_, SoundCloud>,
+    id: Option<u64>,
+    profile_url: Option<String>,
+) -> AppResult<Artist> {
+    let id = match (id, profile_url) {
+        (Some(id), _) => id,
+        (None, Some(url)) => sc.resolve_artist(&url).await?,
+        (None, None) => return Err(AppError::NotFound("artist".into())),
+    };
+    sc.artist(id).await
+}
+
+/// `section`: "popular", "tracks" or "reposts".
+#[tauri::command]
+pub async fn get_artist_tracks(
+    sc: State<'_, SoundCloud>,
+    id: u64,
+    section: String,
+    next: Option<String>,
+) -> AppResult<Paged<Track>> {
+    sc.artist_tracks(id, &section, next).await
+}
+
+#[tauri::command]
+pub async fn get_artist_playlists(
+    sc: State<'_, SoundCloud>,
+    id: u64,
+) -> AppResult<Vec<PlaylistSummary>> {
+    sc.artist_playlists(id).await
+}
+
+#[tauri::command]
+pub async fn get_feed(
+    sc: State<'_, SoundCloud>,
+    next: Option<String>,
+) -> AppResult<Paged<FeedItem>> {
+    if !sc.has_token() {
+        return Err(AppError::Auth("Sign in to see your feed.".into()));
+    }
+    sc.feed(next).await
+}
+
+#[tauri::command]
+pub async fn follow_artist(sc: State<'_, SoundCloud>, id: u64, follow: bool) -> AppResult<()> {
+    if !sc.has_token() {
+        return Err(AppError::Auth("Sign in to follow artists.".into()));
+    }
+    sc.set_follow(id, follow).await
 }
 
 // --- Playlist editing ------------------------------------------------------
@@ -719,6 +809,12 @@ pub fn open_update_page(app: AppHandle, url: String) -> AppResult<()> {
 #[tauri::command]
 pub fn discord_presence(presence: Option<crate::discord::Presence>) {
     crate::discord::set(presence);
+}
+
+/// What the Discord connection is doing (shown in Settings).
+#[tauri::command]
+pub fn discord_status_text() -> String {
+    crate::discord::status()
 }
 
 /// Whether a Discord application id is set (the feature is available).

@@ -184,7 +184,8 @@ export class Toolbar {
   }
 
   update(s: AppState, prev: AppState | null): void {
-    this.el.hidden = s.tab === "queue";
+    // Queue has its own controls; Search has its own search box.
+    this.el.hidden = s.tab === "queue" || s.tab === "search";
     const trackControls = showsTrackControls(s);
     this.controls.hidden = !trackControls;
 

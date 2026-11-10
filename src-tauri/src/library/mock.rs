@@ -180,6 +180,7 @@ fn build() -> MockLibrary {
                 liked_at_ms: Some(now - i as i64 * LIKE_SPACING_MS),
                 playable: i % 37 != 5,
                 downloadable: i % 9 == 1,
+                artist_id: None,
             }
         })
         .collect();

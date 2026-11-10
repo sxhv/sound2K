@@ -3,6 +3,8 @@ import type { AppState, AppStore } from "../state";
 import type { TabId } from "../types";
 
 const TABS: readonly { id: TabId; label: string }[] = [
+  { id: "home", label: "Home" },
+  { id: "search", label: "Search" },
   { id: "liked", label: "Liked Songs" },
   { id: "playlists", label: "Playlists" },
   { id: "queue", label: "Queue" },

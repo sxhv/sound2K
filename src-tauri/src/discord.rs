@@ -10,7 +10,7 @@
 
 use serde::Deserialize;
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 /// Your Discord application id (a public number, not a secret).
@@ -29,6 +29,27 @@ pub struct Presence {
 }
 
 static SENDER: OnceLock<Sender<Option<Presence>>> = OnceLock::new();
+
+/// Last thing that happened, shown under the switch in Settings.
+static STATUS: Mutex<String> = Mutex::new(String::new());
+
+fn note(msg: String) {
+    eprintln!("[discord] {msg}");
+    *STATUS.lock().unwrap_or_else(|e| e.into_inner()) = msg;
+}
+
+/// Human-readable connection state for Settings.
+pub fn status() -> String {
+    if DISCORD_APP_ID.is_empty() {
+        return "Not set up".into();
+    }
+    let s = STATUS.lock().unwrap_or_else(|e| e.into_inner()).clone();
+    if s.is_empty() {
+        "Waiting for a song to play".into()
+    } else {
+        s
+    }
+}
 
 /// Show / clear the status. Never blocks; the worker thread does the IPC.
 pub fn set(presence: Option<Presence>) {
@@ -83,16 +104,24 @@ fn worker(rx: Receiver<Option<Presence>>) {
             conn = ipc::Conn::open(DISCORD_APP_ID);
             sent = None;
             if conn.is_none() {
-                eprintln!("[discord] Discord not found (is the desktop app running?)");
+                note(format!(
+                    "Discord not found (is the Discord desktop app running?)"
+                ));
                 continue;
             }
-            eprintln!("[discord] connected");
+            note(format!("Connected to Discord"));
         }
         let late = wanted_at.elapsed().as_millis() as u64;
         last_send = Instant::now();
         let Some(c) = conn.as_mut() else { continue };
         let result = match wanted.as_ref() {
-            None => c.set_activity(None),
+            None => {
+                let r = c.set_activity(None);
+                if r.is_ok() {
+                    note("Paused: status cleared".into());
+                }
+                r
+            }
             Some(p) => {
                 // Full status first; if Discord rejects it, fall back to
                 // simpler versions (and log why, for troubleshooting).
@@ -101,12 +130,12 @@ fn worker(rx: Receiver<Option<Presence>>) {
                     result = c.set_activity(Some(activity_json(p, late, level)));
                     match &result {
                         Ok(Ok(())) => {
-                            eprintln!("[discord] status shown (level {level})");
+                            note(format!("Showing on Discord ✓ (level {level})"));
                             break;
                         }
-                        Ok(Err(msg)) => {
-                            eprintln!("[discord] status rejected (level {level}): {msg}")
-                        }
+                        Ok(Err(msg)) => note(format!(
+                            "Discord rejected the status (level {level}): {msg}"
+                        )),
                         Err(_) => break,
                     }
                 }
@@ -116,7 +145,7 @@ fn worker(rx: Receiver<Option<Presence>>) {
         match result {
             Ok(_) => sent = Some(wanted.clone()),
             Err(e) => {
-                eprintln!("[discord] connection lost: {e}");
+                note(format!("Lost connection to Discord: {e}"));
                 conn = None; // Discord closed; reconnect later.
             }
         }
@@ -227,7 +256,10 @@ mod ipc {
                 match conn.read() {
                     Ok((op, _)) if op != CLOSE => Some(conn),
                     Ok((_, reply)) => {
-                        eprintln!("[discord] refused: {}", String::from_utf8_lossy(&reply));
+                        super::note(format!(
+                            "Discord refused the connection: {}",
+                            String::from_utf8_lossy(&reply)
+                        ));
                         None
                     }
                     Err(_) => None,

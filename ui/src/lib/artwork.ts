@@ -4,7 +4,7 @@
 // being used anywhere (including CSS backgrounds): https only, and only on
 // SoundCloud's image CDN.
 
-export type ArtSize = "small" | "t67x67" | "large" | "t300x300" | "t500x500";
+export type ArtSize = "small" | "t67x67" | "large" | "t300x300" | "t500x500" | "original";
 
 const SIZE_PATTERN = /-(?:small|tiny|badge|t67x67|large|t300x300|crop|t500x500|original)\.(jpg|png)$/;
 

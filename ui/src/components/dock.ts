@@ -6,6 +6,7 @@ import type { Player } from "../player/player";
 import type { AppState, AppStore } from "../state";
 import { openOnSoundCloud, toggleLike } from "../library";
 import { setMarquee } from "../lib/marquee";
+import { openArtistOf } from "../browse";
 import { artwork, swapArt } from "./trackRow";
 
 function setFill(range: HTMLInputElement): void {
@@ -52,6 +53,10 @@ export class Dock {
       },
     });
     this.artist = h("div", { class: "dock-artist", text: "Pick a track to start" });
+    this.artist.addEventListener("click", () => {
+      const t = store.get().player.current;
+      if (t?.artist) openArtistOf(store, t);
+    });
 
     this.shuffleBtn = button({ label: "Shuffle", icon: "shuffle", class: "icon-btn toggle", onClick: () => player.toggleShuffle() });
     this.prevBtn = button({ label: "Previous (Ctrl+←)", icon: "prev", class: "glass-btn round", onClick: () => player.prev() });

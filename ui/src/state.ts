@@ -1,5 +1,7 @@
 import { Store } from "./store";
 import type {
+  Artist,
+  FeedItem,
   UpdateInfo,
   Account,
   FilterPrefs,
@@ -28,6 +30,47 @@ export interface OpenPlaylist {
   summary: PlaylistSummary;
   tracks: Track[];
   loading: boolean;
+}
+
+export type ArtistSection = "popular" | "tracks" | "reposts" | "playlists";
+
+/** The open artist page. */
+export interface ArtistPageState {
+  id: number | null;
+  profileUrl: string | null;
+  /** Shown while loading (from the track that was clicked). */
+  name: string;
+  info: Artist | null;
+  section: ArtistSection;
+  tracks: Track[];
+  playlists: PlaylistSummary[];
+  next: string | null;
+  loading: boolean;
+  error: string | null;
+}
+
+export type SearchKind = "tracks" | "artists" | "playlists";
+
+export interface SearchState {
+  q: string;
+  kind: SearchKind;
+  tracks: Track[];
+  artists: Artist[];
+  playlists: PlaylistSummary[];
+  next: string | null;
+  loading: boolean;
+  error: string | null;
+  /** A search has been run (vs. the empty start screen). */
+  done: boolean;
+}
+
+export interface FeedState {
+  items: FeedItem[];
+  tracks: Track[];
+  next: string | null;
+  loading: boolean;
+  error: string | null;
+  loaded: boolean;
 }
 
 export interface AppState {
@@ -77,7 +120,10 @@ export interface AppState {
   update: UpdateInfo | null;
 
   /** Library (tabs) or one of the top-bar pages. */
-  page: "library" | "equalizer" | "sound";
+  page: "library" | "equalizer" | "sound" | "artist";
+  artist: ArtistPageState | null;
+  scSearch: SearchState;
+  feed: FeedState;
   /** Full-screen Now Playing view. */
   nowPlayingOpen: boolean;
   /** Queue slide-out panel. */
@@ -153,6 +199,9 @@ export function createInitialState(settings: Settings): AppState {
     updateCheck: settings.updateCheck ?? DEFAULT_SETTINGS.updateCheck,
     update: null,
     page: "library",
+    artist: null,
+    scSearch: { q: "", kind: "tracks", tracks: [], artists: [], playlists: [], next: null, loading: false, error: null, done: false },
+    feed: { items: [], tracks: [], next: null, loading: false, error: null, loaded: false },
     nowPlayingOpen: false,
     queueOpen: false,
     mini: false,

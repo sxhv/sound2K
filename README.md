@@ -40,6 +40,11 @@
 - **Ctrl+Alt+L** locks it so clicks pass straight through to the game
 - Windows **media keys** and the volume-flyout controls work
 
+**🔎 All of SoundCloud**
+- **Search** every track, artist and playlist on SoundCloud
+- **Home feed:** new uploads and reposts from artists you follow
+- **Artist pages** with popular tracks, uploads, reposts and playlists, plus **Follow**
+
 **🛠 Your library**
 - **Like / unlike**, **create, rename and delete playlists**, add, remove and reorder tracks
 - **Jump to the playing song** in any list (Ctrl+J)

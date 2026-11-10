@@ -273,7 +273,32 @@ export class TopBar {
       toggle("Visualizer", s.visualizer, (on) => this.store.set({ visualizer: on })),
       toggle("Artwork colours", s.artBackgrounds, (on) => this.store.set({ artBackgrounds: on })),
       toggle("Cat mascot", s.mascot, (on) => this.store.set({ mascot: on })),
-      ...(this.discordAvailable ? [toggle("Discord status", s.discordStatus, (on) => this.store.set({ discordStatus: on }))] : []),
+      ...(this.discordAvailable ? this.buildDiscordSetting(toggle) : []),
     ];
+  }
+
+  /** Discord switch plus a live connection line (only while it's on). */
+  private buildDiscordSetting(toggle: (label: string, checked: boolean, onChange: (on: boolean) => void) => HTMLElement): HTMLElement[] {
+    const line = h("p", { class: "setting-status" });
+    const refresh = (): void => {
+      const on = this.store.get().discordStatus;
+      line.hidden = !on;
+      if (!on) return;
+      api.discordStatusText().then(
+        (text) => (line.textContent = text),
+        () => (line.textContent = ""),
+      );
+    };
+    const row = toggle("Discord status", this.store.get().discordStatus, (on) => {
+      this.store.set({ discordStatus: on });
+      window.setTimeout(refresh, 300);
+    });
+    refresh();
+    // Keep it fresh while the menu is open.
+    const timer = window.setInterval(() => {
+      if (!line.isConnected) window.clearInterval(timer);
+      else refresh();
+    }, 1500);
+    return [row, line];
   }
 }

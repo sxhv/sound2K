@@ -17,6 +17,8 @@ export interface Track {
   likedAtMs: number | null;
   /** False for blocked, private or otherwise unstreamable tracks. */
   playable: boolean;
+  /** SoundCloud user id of the uploader (artist page). */
+  artistId?: number | null;
   /** The artist allows downloads on SoundCloud. */
   downloadable?: boolean;
 }
@@ -127,6 +129,32 @@ export interface StorageInfo {
   folder: string;
 }
 
-export type TabId = "liked" | "playlists" | "queue" | "recent";
+export type TabId = "home" | "search" | "liked" | "playlists" | "queue" | "recent";
+
+/** A SoundCloud user (artist page, search result). */
+export interface Artist {
+  id: number;
+  username: string;
+  avatarUrl: string | null;
+  bannerUrl: string | null;
+  permalinkUrl: string | null;
+  city: string | null;
+  followers: number;
+  trackCount: number;
+  /** Whether you follow them (null = unknown / signed out). */
+  following: boolean | null;
+}
+
+/** One page of results; `next` fetches the following page. */
+export interface Paged<T> {
+  items: T[];
+  next: string | null;
+}
+
+export interface FeedItem {
+  track: Track;
+  repostedBy: string | null;
+  atMs: number | null;
+}
 
 export type RepeatMode = "off" | "all" | "one";
