@@ -5,7 +5,7 @@ use super::api_types::{
 use crate::errors::{AppError, AppResult};
 use crate::library::models::{Account, Artist, FeedItem, Paged, PlaylistSummary, Track};
 use regex::Regex;
-use reqwest::header::{HeaderValue, ACCEPT, AUTHORIZATION};
+use reqwest::header::{HeaderValue, ACCEPT, AUTHORIZATION, ORIGIN, REFERER};
 use reqwest::{Method, StatusCode};
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
@@ -161,7 +161,10 @@ impl SoundCloud {
             let mut req = self
                 .http
                 .request(method.clone(), url)
-                .header(ACCEPT, HeaderValue::from_static("application/json"));
+                .header(ACCEPT, HeaderValue::from_static("application/json"))
+                // The same origin soundcloud.com's own requests carry.
+                .header(ORIGIN, HeaderValue::from_static("https://soundcloud.com"))
+                .header(REFERER, HeaderValue::from_static("https://soundcloud.com/"));
             if let Some(token) = self.token() {
                 let mut value = HeaderValue::from_str(&format!("OAuth {token}")).map_err(|_| {
                     AppError::Auth("Stored session is invalid. Please sign in again.".into())
@@ -171,6 +174,10 @@ impl SoundCloud {
             }
             if let Some(body) = body {
                 req = req.json(body);
+            } else if method != Method::GET {
+                // Likes, reposts and follows have no body; send an explicit
+                // empty one (Content-Length: 0), like a browser does.
+                req = req.body("");
             }
 
             let resp = req.send().await?;
@@ -181,13 +188,22 @@ impl SoundCloud {
                     refreshed_client_id = true;
                     self.set_client_id(None);
                 }
-                StatusCode::UNAUTHORIZED => {
+                StatusCode::UNAUTHORIZED if method == Method::GET => {
                     return Err(AppError::Auth(
                         "Your SoundCloud session has expired. Please sign in again.".into(),
                     ))
                 }
+                // A rejected like / repost / follow doesn't necessarily mean
+                // the session is gone, so don't report it as expired.
+                StatusCode::UNAUTHORIZED => {
+                    return Err(AppError::Api(
+                        "SoundCloud didn't accept this from the app (401). Try signing out and in again.".into(),
+                    ))
+                }
                 StatusCode::FORBIDDEN => {
-                    return Err(AppError::Api("SoundCloud refused this request.".into()))
+                    return Err(AppError::Api(
+                        "SoundCloud refused this request (403).".into(),
+                    ))
                 }
                 StatusCode::NOT_FOUND => return Err(AppError::NotFound("SoundCloud item".into())),
                 StatusCode::TOO_MANY_REQUESTS
