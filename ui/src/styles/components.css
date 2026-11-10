@@ -1211,6 +1211,12 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  border-radius: 50%;
+}
+
+/* Keep the update dot visible (the picture is rounded on its own). */
+.topbar .avatar.has-dot {
+  overflow: visible;
 }
 
 .mode-pill.is-busy {
@@ -3071,16 +3077,18 @@ html.no-mascot .mascot {
   height: 26px;
 }
 
-/* Update available: dot on the gear. */
-.topbar .glass-btn.has-dot {
+/* Update available: dot on your profile picture (opens Settings). */
+.topbar .glass-btn.has-dot,
+.topbar .avatar.has-dot {
   position: relative;
 }
 
-.topbar .glass-btn.has-dot::after {
+.topbar .glass-btn.has-dot::after,
+.topbar .avatar.has-dot::after {
   content: "";
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: 0;
+  right: 0;
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -4288,4 +4296,16 @@ button.home-card {
     inset 0 0 0 2px color-mix(in srgb, var(--accent-light) 85%, transparent),
     inset 0 0 14px 2px color-mix(in srgb, var(--accent-light) 65%, transparent),
     inset 0 0 40px 4px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+/* Artist links are only clickable on the name itself, not the empty
+   space after it. */
+.track-artist.is-link,
+.card-sub.is-link,
+.dock-artist,
+.np-artist,
+.hb-artist {
+  width: fit-content;
+  max-width: 100%;
+  align-self: flex-start;
 }

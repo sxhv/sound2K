@@ -24,7 +24,6 @@ export class TopBar {
   readonly el: HTMLElement;
   private readonly pill: HTMLElement;
   private readonly avatar: HTMLElement;
-  private readonly gear: HTMLButtonElement;
   private readonly eqBtn: HTMLButtonElement;
   private readonly soundBtn: HTMLButtonElement;
   /** A Discord app id is built in (see src-tauri/src/discord.rs). */
@@ -46,14 +45,9 @@ export class TopBar {
       wordmark,
       this.pill,
     ]);
-    this.avatar = h("button", { class: "avatar", attrs: { type: "button" } });
+    // Your profile picture opens Settings (account, theme, options).
+    this.avatar = h("button", { class: "avatar", attrs: { type: "button", "aria-haspopup": "dialog" } });
     this.avatar.addEventListener("click", () => this.toggleSettings());
-    this.gear = h(
-      "button",
-      { class: "glass-btn icon-only", attrs: { type: "button", "aria-label": "Settings", title: "Settings", "aria-haspopup": "dialog", "aria-expanded": "false" } },
-      [icon("gear")],
-    );
-    this.gear.addEventListener("click", () => this.toggleSettings());
     api.discordAvailable().then(
       (yes) => (this.discordAvailable = yes),
       () => undefined,
@@ -76,23 +70,21 @@ export class TopBar {
       this.eqBtn,
       this.soundBtn,
       this.avatar,
-      this.gear,
       windowButtons,
     ]);
   }
 
   private toggleSettings(): void {
-    if (isPopoverOpenFor(this.gear)) {
+    if (isPopoverOpenFor(this.avatar)) {
       closePopover();
       return;
     }
-    openPopover(this.gear, this.buildSettingsPanel(), { align: "end", className: "popover-wide" });
+    openPopover(this.avatar, this.buildSettingsPanel(), { align: "end", className: "popover-wide" });
   }
 
   update(s: AppState, prev: AppState | null): void {
     if (!prev || s.update !== prev.update) {
-      this.gear.classList.toggle("has-dot", s.update !== null);
-      this.gear.title = s.update ? `Settings · update v${s.update.latest} available` : "Settings";
+      this.avatar.classList.toggle("has-dot", s.update !== null);
     }
     if (!prev || s.page !== prev.page || s.eqEnabled !== prev.eqEnabled) {
       this.eqBtn.classList.toggle("is-active", s.page === "equalizer");
@@ -111,8 +103,8 @@ export class TopBar {
     if (!prev || s.account !== prev.account) {
       const a = s.account;
       const label = a ? `Signed in as ${a.username}` : "Not signed in";
-      this.avatar.setAttribute("aria-label", `${label}. Open account settings`);
-      this.avatar.title = label;
+      this.avatar.setAttribute("aria-label", `${label}. Open settings`);
+      this.avatar.title = `${label} · Settings`;
       if (a?.avatarUrl) {
         const img = h("img", { attrs: { src: a.avatarUrl, alt: "", decoding: "async" } });
         img.addEventListener("error", () => this.avatar.replaceChildren(icon("user")));

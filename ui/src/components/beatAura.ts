@@ -5,8 +5,9 @@
 import type { AppState } from "../state";
 import type { Visualizer } from "./visualizer";
 
-const MIN_GAP_MS = 180; // at most ~5 hits a second
-const DECAY = 0.84; // per frame (~30 fps)
+const MIN_GAP_MS = 260; // at most ~4 hits a second
+const ATTACK = 0.45; // how fast the glow rises to a hit (per frame, ~30 fps)
+const DECAY = 0.93; // how slowly it fades (~1 s to die down)
 
 export class BeatAura {
   readonly el: HTMLElement;
@@ -14,6 +15,9 @@ export class BeatAura {
   private avg = 0;
   private prevBass = 0;
   private level = 0;
+  /** A hit's brightness, and whether the glow is still rising to it. */
+  private target = 0;
+  private rising = false;
   private lastHit = 0;
   private enabled = true;
   private readonly reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -37,7 +41,16 @@ export class BeatAura {
     if (bass > 0.12 && rise > 0.025 && bass > this.avg * 1.18 + 0.02 && now - this.lastHit > MIN_GAP_MS) {
       this.lastHit = now;
       // Harder hits glow brighter.
-      this.level = Math.max(this.level, Math.min(1, 0.4 + (bass - this.avg) * 3.2));
+      const strength = Math.min(0.85, 0.35 + (bass - this.avg) * 2.6);
+      if (strength > this.level) {
+        this.target = strength;
+        this.rising = true;
+      }
+    }
+    // Ease up to the hit, then fade out slowly.
+    if (this.rising) {
+      this.level += (this.target - this.level) * ATTACK;
+      if (this.target - this.level < 0.02) this.rising = false;
     } else {
       this.level *= DECAY;
     }
@@ -57,6 +70,8 @@ export class BeatAura {
     const playing = s.player.playing && s.player.current !== null;
     if (!playing && this.level > 0) {
       this.level = 0;
+      this.target = 0;
+      this.rising = false;
       this.paint();
     }
   }
