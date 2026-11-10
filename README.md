@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/library.webp" alt="Sound2K library view" width="90%">
+  <img src="docs/home.webp" alt="Sound2K Home page" width="90%">
 </p>
 
 ---
@@ -55,9 +55,15 @@
 
 ## Screenshots
 
-| Now Playing | Playlist |
+| Home: quick picks & mixes | Liked Songs |
 |---|---|
-| <img src="docs/now-playing.webp" alt="Now Playing view"> | <img src="docs/playlist.webp" alt="Playlist with header"> |
+| <img src="docs/home-2.webp" alt="Home page with Quick picks and Mixes for you"> | <img src="docs/library.webp" alt="Liked Songs list"> |
+| **Search** | **Artist pages** |
+| <img src="docs/search.webp" alt="Search results"> | <img src="docs/artist.webp" alt="Artist page with Follow"> |
+| **Now Playing** | **Add to playlist** |
+| <img src="docs/now-playing.webp" alt="Now Playing view"> | <img src="docs/picker.webp" alt="Add to playlist picker"> |
+| **Playlists** | **Playlist** |
+| <img src="docs/playlists.webp" alt="Playlists grid"> | <img src="docs/playlist.webp" alt="Playlist with header"> |
 | **Equalizer** | **Crossfade & levelling** |
 | <img src="docs/equalizer.webp" alt="Equalizer page"> | <img src="docs/sound.webp" alt="Sound page"> |
 | **Queue slide-out** | **Dark theme** |
@@ -68,7 +74,7 @@
   <img src="docs/mini.webp" alt="Mini-player" width="460">
 </p>
 
-<sub>Screenshots use the built-in sample library; with your account you'll see your real covers.</sub>
+<sub>Screenshots use made-up sample tracks and generated cover art; signed in, you'll see your own library and real covers.</sub>
 
 ## Install
 
