@@ -201,9 +201,18 @@ impl SoundCloud {
                     ))
                 }
                 StatusCode::FORBIDDEN => {
-                    return Err(AppError::Api(
-                        "SoundCloud refused this request (403).".into(),
-                    ))
+                    // Tell bot-protection blocks apart from "not allowed".
+                    let bot_header = resp.headers().contains_key("x-datadome")
+                        || resp.headers().contains_key("x-dd-b");
+                    let body = resp.text().await.unwrap_or_default();
+                    let bot = bot_header
+                        || body.contains("captcha-delivery")
+                        || body.to_ascii_lowercase().contains("datadome");
+                    return Err(AppError::Api(if bot {
+                        "SoundCloud's bot protection blocked this (403, DataDome).".into()
+                    } else {
+                        "SoundCloud refused this request (403, not bot protection).".into()
+                    }));
                 }
                 StatusCode::NOT_FOUND => return Err(AppError::NotFound("SoundCloud item".into())),
                 StatusCode::TOO_MANY_REQUESTS
