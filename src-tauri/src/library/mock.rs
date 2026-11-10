@@ -181,6 +181,7 @@ fn build() -> MockLibrary {
                 playable: i % 37 != 5,
                 downloadable: i % 9 == 1,
                 artist_id: None,
+                plays: Some(rng.below(2_000_000) as u64),
             }
         })
         .collect();
@@ -201,6 +202,7 @@ fn build() -> MockLibrary {
                 artwork_url: None,
                 owner_id: 0,
                 sharing: None,
+                set_type: None,
             };
             (summary, indices)
         })

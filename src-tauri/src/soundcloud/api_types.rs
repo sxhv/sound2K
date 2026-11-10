@@ -166,6 +166,8 @@ pub struct ApiTrack {
     /// Set by the artist: the original file may be downloaded.
     #[serde(default)]
     pub downloadable: Option<bool>,
+    #[serde(default)]
+    pub playback_count: Option<u64>,
 }
 
 impl ApiTrack {
@@ -199,6 +201,7 @@ impl ApiTrack {
             playable,
             downloadable: self.downloadable == Some(true),
             artist_id,
+            plays: self.playback_count,
         }
     }
 }
@@ -315,6 +318,10 @@ pub struct ApiPlaylist {
     pub tracks: Vec<ApiTrack>,
     #[serde(default)]
     pub sharing: Option<String>,
+    #[serde(default)]
+    pub set_type: Option<String>,
+    #[serde(default)]
+    pub is_album: Option<bool>,
 }
 
 impl ApiPlaylist {
@@ -335,6 +342,11 @@ impl ApiPlaylist {
             artwork_url: self.artwork_url.clone().or(first_track_art),
             owner_id: self.user.as_ref().map(|u| u.id).unwrap_or(0),
             sharing: self.sharing.clone(),
+            set_type: match self.set_type.as_deref() {
+                Some(t) if !t.is_empty() => Some(t.to_string()),
+                _ if self.is_album == Some(true) => Some("album".to_string()),
+                _ => None,
+            },
         }
     }
 }

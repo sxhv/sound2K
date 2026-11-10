@@ -27,6 +27,10 @@ const MAX_PAGES: usize = 100;
 /// /tracks?ids= accepts up to 50 ids per request.
 const IDS_PER_REQUEST: usize = 50;
 const MAX_ATTEMPTS: u32 = 4;
+/// Albums / playlists on an artist page: up to 10 × 50.
+const ARTIST_SETS_MAX_PAGES: usize = 10;
+/// Your reposts we check for the Repost button: up to 5 × 100.
+const REPOSTS_MAX_PAGES: usize = 5;
 
 /// Shared SoundCloud client (one per app, managed by Tauri).
 pub struct SoundCloud {
@@ -221,7 +225,7 @@ impl SoundCloud {
             // Deleted tracks come back without a `track`; skip them.
             tracks.extend(page.collection.into_iter().filter_map(ApiLike::into_track));
             pages += 1;
-            if pages < MAX_PAGES {
+            if pages < max_pages {
                 next = page.next_href;
             }
         }
@@ -604,13 +608,52 @@ impl SoundCloud {
         }
     }
 
-    pub async fn artist_playlists(&self, user_id: u64) -> AppResult<Vec<PlaylistSummary>> {
-        let page: Page<ApiPlaylist> = self
-            .get_json(&format!(
-                "{API_BASE}/users/{user_id}/playlists?limit=50&linked_partitioning=1"
-            ))
-            .await?;
-        Ok(page.collection.iter().map(ApiPlaylist::summary).collect())
+    /// `kind`: "albums" (albums and compilations), "eps" (EPs and singles)
+    /// or "playlists" (ordinary playlists).
+    pub async fn artist_playlists(
+        &self,
+        user_id: u64,
+        kind: &str,
+    ) -> AppResult<Vec<PlaylistSummary>> {
+        let path = match kind {
+            "albums" | "eps" => "albums",
+            "playlists" => "playlists_without_albums",
+            _ => return Err(AppError::Api("Unknown artist section.".into())),
+        };
+        let first = format!("{API_BASE}/users/{user_id}/{path}?limit=50&linked_partitioning=1");
+        let items: Vec<ApiPlaylist> = self.collect_pages_max(first, ARTIST_SETS_MAX_PAGES).await?;
+        let wanted = |t: Option<&str>| match kind {
+            "albums" => !matches!(t, Some("ep") | Some("single")),
+            "eps" => matches!(t, Some("ep") | Some("single")),
+            _ => true,
+        };
+        Ok(items
+            .iter()
+            .map(ApiPlaylist::summary)
+            .filter(|p| wanted(p.set_type.as_deref()))
+            .collect())
+    }
+
+    /// Repost (`true`) or remove your repost of (`false`) a track.
+    pub async fn set_repost(&self, track_id: u64, repost: bool) -> AppResult<()> {
+        let method = if repost { Method::PUT } else { Method::DELETE };
+        let address = format!("{API_BASE}/me/track_reposts/{track_id}");
+        match self.request(method, &address).await {
+            Ok(_) => Ok(()),
+            Err(AppError::NotFound(_)) if !repost => Ok(()),
+            Err(e) => Err(e),
+        }
+    }
+
+    /// Ids of tracks you've reposted (your most recent reposts).
+    pub async fn reposted_ids(&self, user_id: u64) -> AppResult<Vec<String>> {
+        let first =
+            format!("{API_BASE}/stream/users/{user_id}/reposts?limit=100&linked_partitioning=1");
+        let items: Vec<ApiStreamItem> = self.collect_pages_max(first, REPOSTS_MAX_PAGES).await?;
+        Ok(items
+            .into_iter()
+            .filter_map(|i| i.into_feed_item().map(|f| f.track.id))
+            .collect())
     }
 
     /// Your home feed: uploads and reposts from people you follow.
@@ -740,6 +783,15 @@ impl SoundCloud {
     }
 
     async fn collect_pages<T: DeserializeOwned>(&self, first: String) -> AppResult<Vec<T>> {
+        self.collect_pages_max(first, MAX_PAGES).await
+    }
+
+    /// Follow `next_href` links, reading at most `max_pages` pages.
+    async fn collect_pages_max<T: DeserializeOwned>(
+        &self,
+        first: String,
+        max_pages: usize,
+    ) -> AppResult<Vec<T>> {
         let mut next = Some(first);
         let mut items = Vec::new();
         let mut pages = 0;

@@ -22,6 +22,9 @@ pub struct Track {
     /// SoundCloud user id of the uploader (for artist pages).
     #[serde(default)]
     pub artist_id: Option<u64>,
+    /// Play count shown on SoundCloud (`None` = unknown / hidden by the artist).
+    #[serde(default)]
+    pub plays: Option<u64>,
 }
 
 /// A SoundCloud user, as shown on an artist page or in search.
@@ -72,6 +75,10 @@ pub struct PlaylistSummary {
     /// "public" or "private".
     #[serde(default)]
     pub sharing: Option<String>,
+    /// Release type set by the artist: "album", "ep", "single",
+    /// "compilation" (`None` for ordinary playlists).
+    #[serde(default)]
+    pub set_type: Option<String>,
 }
 
 /// The signed-in SoundCloud user (public profile fields only).

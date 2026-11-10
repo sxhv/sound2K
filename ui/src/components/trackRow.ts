@@ -1,5 +1,5 @@
 import { h } from "../lib/dom";
-import { formatDuration, placeholderGradient } from "../lib/format";
+import { formatCount, formatDuration, placeholderGradient } from "../lib/format";
 import { icon } from "../lib/icons";
 import { artUrl, type ArtSize } from "../lib/artwork";
 import type { AppState } from "../state";
@@ -13,6 +13,8 @@ export interface RowHandlers {
   play(track: Track, index: number): void;
   menu(track: Track, anchor: HTMLElement, index: number): void;
   toggleLike(track: Track): void;
+  /** Repost / remove repost (SoundCloud tracks, signed in). */
+  toggleRepost?(track: Track): void;
   /** Open the artist page (artist name click). */
   artist?(track: Track): void;
 }
@@ -22,6 +24,9 @@ export interface RowState {
   playing: boolean;
   selectedId: string | null;
   likedIds: ReadonlySet<string>;
+  repostedIds: ReadonlySet<string>;
+  /** Signed-in user's id (null = signed out: no repost buttons). */
+  accountId: number | null;
 }
 
 export function rowState(s: AppState): RowState {
@@ -30,6 +35,8 @@ export function rowState(s: AppState): RowState {
     playing: s.player.playing,
     selectedId: s.selectedId,
     likedIds: s.likedIds,
+    repostedIds: s.repostedIds,
+    accountId: s.account?.id ?? null,
   };
 }
 
@@ -98,6 +105,21 @@ export function buildTrackRow(
   });
   like.addEventListener("dblclick", (e) => e.stopPropagation());
 
+  const repost = h("button", { class: "icon-btn track-repost", attrs: { type: "button", "aria-label": "Repost", title: "Repost" } }, [icon("repost")]);
+  repost.hidden = !handlers.toggleRepost || !track.id.startsWith("sc:");
+  repost.addEventListener("click", (e) => {
+    e.stopPropagation();
+    handlers.toggleRepost?.(track);
+  });
+  repost.addEventListener("dblclick", (e) => e.stopPropagation());
+
+  // Play count, as shown on SoundCloud.
+  const plays = h("span", { class: "track-plays" });
+  if (typeof track.plays === "number") {
+    plays.append(icon("play"), h("span", { text: formatCount(track.plays) }));
+    plays.title = `${track.plays.toLocaleString()} plays`;
+  }
+
   const more = h(
     "button",
     { class: "icon-btn row-more", attrs: { type: "button", "aria-label": "More options", title: "More", "aria-haspopup": "menu" } },
@@ -122,6 +144,8 @@ export function buildTrackRow(
     artwork(track, "art-row"),
     meta,
     ...extras,
+    plays,
+    repost,
     like,
     h("span", { class: "track-duration", text: formatDuration(track.durationMs) }),
     more,
@@ -138,6 +162,18 @@ export function decorateRow(row: HTMLElement, track: Track, s: RowState): void {
   row.setAttribute("aria-current", isCurrent ? "true" : "false");
   const liked = s.likedIds.has(track.id);
   row.classList.toggle("is-liked", liked);
+  const repost = row.querySelector<HTMLElement>(".track-repost");
+  if (repost && repost.dataset.base !== "hidden") {
+    if (repost.dataset.base === undefined) repost.dataset.base = repost.hidden ? "hidden" : "shown";
+    const own = s.accountId === null || track.artistId === s.accountId;
+    repost.hidden = repost.dataset.base === "hidden" || own;
+    const on = s.repostedIds.has(track.id);
+    row.classList.toggle("is-reposted", on);
+    const label = on ? "Remove repost" : "Repost";
+    repost.setAttribute("aria-label", label);
+    repost.setAttribute("aria-pressed", String(on));
+    repost.title = label;
+  }
   const like = row.querySelector<HTMLElement>(".track-like");
   if (like) {
     const label = liked ? "Unlike" : "Like";

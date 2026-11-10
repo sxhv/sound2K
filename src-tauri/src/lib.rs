@@ -101,6 +101,8 @@ pub fn run() {
             commands::get_feed,
             commands::follow_artist,
             commands::get_followings,
+            commands::repost_track,
+            commands::get_reposted_ids,
             commands::check_for_update,
             commands::open_update_page,
             commands::install_update,

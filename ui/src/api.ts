@@ -38,7 +38,9 @@ export const api = {
   getArtist: (id: number | null, profileUrl: string | null) => invoke<Artist>("get_artist", { id, profileUrl }),
   getArtistTracks: (id: number, section: string, next: string | null) =>
     invoke<Paged<Track>>("get_artist_tracks", { id, section, next }),
-  getArtistPlaylists: (id: number) => invoke<PlaylistSummary[]>("get_artist_playlists", { id }),
+  getArtistPlaylists: (id: number, kind: "albums" | "eps" | "playlists") => invoke<PlaylistSummary[]>("get_artist_playlists", { id, kind }),
+  repostTrack: (trackId: string, repost: boolean) => invoke<void>("repost_track", { trackId, repost }),
+  getRepostedIds: () => invoke<string[]>("get_reposted_ids"),
   getFeed: (next: string | null) => invoke<Paged<FeedItem>>("get_feed", { next }),
   followArtist: (id: number, follow: boolean) => invoke<void>("follow_artist", { id, follow }),
   getFollowings: () => invoke<Artist[]>("get_followings"),

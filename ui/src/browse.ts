@@ -100,7 +100,7 @@ export function openArtist(store: AppStore, ref: { id: number | null; profileUrl
   store.set({
     page: "artist",
     nowPlayingOpen: false,
-    artist: { ...ref, info: null, section: "popular", tracks: [], playlists: [], next: null, loading: true, error: null },
+    artist: { ...ref, info: null, section: "popular", query: "", sort: "default", tracks: [], playlists: [], next: null, loading: true, error: null },
   });
   api
     .getArtist(ref.id, ref.profileUrl)
@@ -127,8 +127,8 @@ export async function loadArtistSection(store: AppStore, section: ArtistSection,
     artist: more ? { ...a, loading: true } : { ...a, section, tracks: [], playlists: [], next: null, loading: true, error: null },
   });
   try {
-    if (section === "playlists") {
-      const playlists = await api.getArtistPlaylists(id);
+    if (section === "albums" || section === "eps" || section === "playlists") {
+      const playlists = await api.getArtistPlaylists(id, section);
       const cur = store.get().artist;
       if (seq !== artistSeq || !cur || cur.section !== section) return;
       store.set({ artist: { ...cur, playlists, loading: false } });
@@ -190,8 +190,37 @@ export function openPlaylist(store: AppStore, p: PlaylistSummary): void {
     });
 }
 
-export function formatCount(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(n >= 10_000 ? 0 : 1)}K`;
-  return String(n);
+export { formatCount } from "./lib/format";
+
+/** You can't repost your own tracks (SoundCloud doesn't allow it). */
+export function canRepost(s: { account: { id: number } | null }, t: Track): boolean {
+  return s.account !== null && t.id.startsWith("sc:") && t.artistId !== s.account.id;
+}
+
+/** Repost a track to your profile, or remove your repost. */
+export async function toggleRepost(store: AppStore, t: Track): Promise<void> {
+  const s = store.get();
+  if (!s.account) {
+    toast("Sign in to SoundCloud to repost tracks.");
+    return;
+  }
+  if (!canRepost(s, t)) {
+    toast("You can't repost your own tracks.");
+    return;
+  }
+  const was = s.repostedIds.has(t.id);
+  const set = (on: boolean): void => {
+    const next = new Set(store.get().repostedIds);
+    if (on) next.add(t.id);
+    else next.delete(t.id);
+    store.set({ repostedIds: next });
+  };
+  set(!was);
+  try {
+    await api.repostTrack(t.id, !was);
+    toast(was ? "Repost removed" : `Reposted “${t.title}”`);
+  } catch (e) {
+    set(was);
+    toast(`Couldn't ${was ? "remove the repost" : "repost"}: ${errorMessage(e)}`, "error");
+  }
 }

@@ -32,7 +32,11 @@ export interface OpenPlaylist {
   loading: boolean;
 }
 
-export type ArtistSection = "popular" | "tracks" | "reposts" | "playlists";
+export type ArtistSection = "popular" | "tracks" | "albums" | "eps" | "playlists" | "reposts";
+/** Sections that list albums / playlists rather than tracks. */
+export const SET_SECTIONS: ReadonlySet<ArtistSection> = new Set(["albums", "eps", "playlists"]);
+/** Sort for an artist page list ("default" = SoundCloud's order). */
+export type ArtistSort = "default" | "plays" | "title" | "longest" | "shortest";
 
 /** The open artist page. */
 export interface ArtistPageState {
@@ -42,6 +46,9 @@ export interface ArtistPageState {
   name: string;
   info: Artist | null;
   section: ArtistSection;
+  /** Search within this artist's list, and its sort. */
+  query: string;
+  sort: ArtistSort;
   tracks: Track[];
   playlists: PlaylistSummary[];
   next: string | null;
@@ -87,6 +94,8 @@ export interface AppState {
 
   liked: Track[];
   likedIds: ReadonlySet<string>;
+  /** Tracks you've reposted (your recent reposts plus ones you repost here). */
+  repostedIds: ReadonlySet<string>;
   playlists: PlaylistSummary[];
   openPlaylist: OpenPlaylist | null;
 
@@ -177,6 +186,7 @@ export function createInitialState(settings: Settings): AppState {
     signingIn: false,
     liked: [],
     likedIds: new Set(),
+    repostedIds: new Set(),
     playlists: [],
     openPlaylist: null,
     queue: [],

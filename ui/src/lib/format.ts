@@ -28,6 +28,13 @@ export function placeholderGradient(id: string): string {
   return `linear-gradient(${angle}deg, hsl(${hue} 85% ${light}%), hsl(${(hue + 340) % 360} 70% ${Math.max(12, light - 26)}%))`;
 }
 
+/** 1234 → "1.2K", 3400000 → "3.4M". */
+export function formatCount(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(n >= 10_000 ? 0 : 1)}K`;
+  return String(n);
+}
+
 export function plural(n: number, word: string): string {
   return `${n.toLocaleString()} ${word}${n === 1 ? "" : "s"}`;
 }

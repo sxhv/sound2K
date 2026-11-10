@@ -208,8 +208,33 @@ pub async fn get_artist_tracks(
 pub async fn get_artist_playlists(
     sc: State<'_, SoundCloud>,
     id: u64,
+    kind: Option<String>,
 ) -> AppResult<Vec<PlaylistSummary>> {
-    sc.artist_playlists(id).await
+    sc.artist_playlists(id, kind.as_deref().unwrap_or("playlists"))
+        .await
+}
+
+/// Repost a track to your profile, or remove your repost.
+#[tauri::command]
+pub async fn repost_track(
+    sc: State<'_, SoundCloud>,
+    track_id: String,
+    repost: bool,
+) -> AppResult<()> {
+    if !sc.has_token() {
+        return Err(AppError::Auth("Sign in to repost tracks.".into()));
+    }
+    sc.set_repost(numeric_track_id(&track_id)?, repost).await
+}
+
+/// Ids of tracks you've recently reposted (to show the Repost button's state).
+#[tauri::command]
+pub async fn get_reposted_ids(app: AppHandle, sc: State<'_, SoundCloud>) -> AppResult<Vec<String>> {
+    if !sc.has_token() {
+        return Ok(Vec::new());
+    }
+    let user_id = account_id(&app, &sc).await?;
+    sc.reposted_ids(user_id).await
 }
 
 #[tauri::command]

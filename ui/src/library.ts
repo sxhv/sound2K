@@ -7,6 +7,16 @@ import type { AppStore } from "./state";
 import type { Track } from "./types";
 
 /** Load likes + playlists. `refresh: false` uses the local cache if present. */
+/** Which tracks you've reposted (for the Repost buttons). */
+export async function loadRepostedIds(store: AppStore): Promise<void> {
+  try {
+    const ids = await api.getRepostedIds();
+    store.set({ repostedIds: new Set(ids) });
+  } catch {
+    // Not critical: the buttons just start as "Repost".
+  }
+}
+
 export async function loadLibrary(store: AppStore, refresh: boolean): Promise<void> {
   const [liked, playlists] = await Promise.all([api.likedTracks(refresh), api.playlists(refresh)]);
   const s = store.get();
@@ -27,6 +37,7 @@ export async function syncLibrary(store: AppStore): Promise<void> {
   store.set({ syncing: true });
   try {
     await loadLibrary(store, true);
+    void loadRepostedIds(store);
   } catch (err) {
     if (errorKind(err) === "auth") {
       toast("Your SoundCloud session has expired. Open Settings (gear icon) to sign in again.", "error");
@@ -44,6 +55,7 @@ function resetLibraryState(store: AppStore, player: Player): void {
   store.set({
     liked: [],
     likedIds: new Set(),
+    repostedIds: new Set(),
     playlists: [],
     openPlaylist: null,
     queue: [],

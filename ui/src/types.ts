@@ -21,6 +21,8 @@ export interface Track {
   artistId?: number | null;
   /** The artist allows downloads on SoundCloud. */
   downloadable?: boolean;
+  /** Play count on SoundCloud (null/undefined = unknown or hidden). */
+  plays?: number | null;
 }
 
 export interface PlaylistSummary {
@@ -32,6 +34,8 @@ export interface PlaylistSummary {
   /** SoundCloud user id of the owner (0 = unknown). */
   ownerId: number;
   sharing: string | null;
+  /** "album", "ep", "single", "compilation" (null for playlists). */
+  setType?: string | null;
 }
 
 /** The signed-in SoundCloud user. */

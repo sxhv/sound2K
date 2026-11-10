@@ -6,7 +6,7 @@ import type { Player } from "../player/player";
 import type { AppState, AppStore } from "../state";
 import { openOnSoundCloud, toggleLike } from "../library";
 import { setMarquee } from "../lib/marquee";
-import { openArtistOf } from "../browse";
+import { canRepost, openArtistOf, toggleRepost } from "../browse";
 import { artwork, swapArt } from "./trackRow";
 
 function setFill(range: HTMLInputElement): void {
@@ -31,6 +31,7 @@ export class Dock {
   private readonly muteBtn: HTMLButtonElement;
   private readonly volume: HTMLInputElement;
   private readonly likeBtn: HTMLButtonElement;
+  private readonly repostBtn: HTMLButtonElement;
   private readonly queueBtn: HTMLButtonElement;
   private dragging = false;
 
@@ -50,6 +51,15 @@ export class Dock {
       onClick: () => {
         const t = store.get().player.current;
         if (t) void toggleLike(store, t);
+      },
+    });
+    this.repostBtn = button({
+      label: "Repost",
+      icon: "repost",
+      class: "icon-btn dock-like dock-repost",
+      onClick: () => {
+        const t = store.get().player.current;
+        if (t) void toggleRepost(store, t);
       },
     });
     this.artist = h("div", { class: "dock-artist", text: "Pick a track to start" });
@@ -88,7 +98,7 @@ export class Dock {
 
     this.el = h("footer", { class: "dock glass-panel" }, [
       visualizer,
-      h("div", { class: "dock-track" }, [this.artSlot, h("div", { class: "dock-meta" }, [this.title, this.artist]), this.likeBtn]),
+      h("div", { class: "dock-track" }, [this.artSlot, h("div", { class: "dock-meta" }, [this.title, this.artist]), this.repostBtn, this.likeBtn]),
       h("div", { class: "dock-center" }, [
         h("div", { class: "dock-controls" }, [this.shuffleBtn, this.prevBtn, this.playBtn, this.nextBtn, this.repeatBtn]),
         h("div", { class: "dock-seek" }, [this.elapsed, this.seek, this.total]),
@@ -106,6 +116,16 @@ export class Dock {
     const p = s.player;
     const pp = prev?.player;
 
+    if (!pp || p.current !== pp.current || s.repostedIds !== prev?.repostedIds || s.account !== prev?.account) {
+      const t = p.current;
+      const ok = t !== null && canRepost(s, t);
+      const on = ok && t !== null && s.repostedIds.has(t.id);
+      this.repostBtn.hidden = !ok;
+      this.repostBtn.classList.toggle("is-on", on);
+      this.repostBtn.setAttribute("aria-pressed", String(on));
+      this.repostBtn.setAttribute("aria-label", on ? "Remove repost" : "Repost");
+      this.repostBtn.title = on ? "Remove repost" : "Repost";
+    }
     if (!pp || p.current !== pp.current || s.likedIds !== prev?.likedIds) {
       const liked = p.current !== null && s.likedIds.has(p.current.id);
       this.likeBtn.hidden = p.current === null;

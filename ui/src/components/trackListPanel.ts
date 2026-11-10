@@ -12,7 +12,7 @@ import { icon } from "../lib/icons";
 import { VirtualList } from "./virtualList";
 import { catSvg } from "./mascot";
 import { showAddToPlaylist } from "../playlistEdit";
-import { openArtistOf } from "../browse";
+import { canRepost, openArtistOf, toggleRepost } from "../browse";
 
 const EMPTY: readonly Track[] = [];
 
@@ -22,6 +22,8 @@ export interface PanelOptions {
   emptyText(s: AppState): string;
   /** Sort + filter controls apply (search always applies). */
   filtersEnabled: boolean;
+  /** Set false when the list has its own search box (artist pages). */
+  globalSearch?: boolean;
   /** Identifies which list is shown; while it stays the same, updates
    * (paging, reordering) keep the scroll position. */
   sourceKey?(s: AppState): string;
@@ -63,6 +65,7 @@ export class TrackListPanel {
           ...(opts.extraMenu?.(t) ?? []),
         ]),
       toggleLike: (t) => void toggleLike(store, t),
+      toggleRepost: (t) => void toggleRepost(store, t),
       artist: (t) => openArtistOf(store, t),
     };
     this.list = new VirtualList<Track>(
@@ -209,7 +212,7 @@ export class TrackListPanel {
         source,
         this.opts.filtersEnabled
           ? { search: s.search, sort: s.sort, filters: s.filters }
-          : { search: s.search, sort: "recently-liked", filters: DEFAULT_FILTERS },
+          : { search: this.opts.globalSearch === false ? "" : s.search, sort: "recently-liked", filters: DEFAULT_FILTERS },
       );
       const sortOrFilterChanged = prev !== null && (s.sort !== prev.sort || s.filters !== prev.filters);
       this.dragOk =
@@ -238,7 +241,9 @@ export class TrackListPanel {
       (s.player.current !== prev.player.current ||
         s.player.playing !== prev.player.playing ||
         s.selectedId !== prev.selectedId ||
-        s.likedIds !== prev.likedIds)
+        s.likedIds !== prev.likedIds ||
+        s.repostedIds !== prev.repostedIds ||
+        s.account !== prev.account)
     ) {
       this.list.refresh();
     }
@@ -254,6 +259,9 @@ export function trackMenu(store: AppStore, player: Player, t: Track, play: () =>
     { label: "Play next", action: () => player.playNext(t), disabled: !t.playable },
     { label: "Add to queue", action: () => player.enqueue(t), disabled: !t.playable },
     { label: liked ? "Unlike" : "Like", action: () => void toggleLike(store, t) },
+    ...(canRepost(store.get(), t)
+      ? [{ label: store.get().repostedIds.has(t.id) ? "Remove repost" : "Repost", action: () => void toggleRepost(store, t) }]
+      : []),
     ...(anchor && t.id.startsWith("sc:") ? [{ label: "Add to playlist…", action: () => showAddToPlaylist(store, anchor, t) }] : []),
     ...(t.downloadable ? [{ label: "Download", action: () => downloadTrack(store, t) }] : []),
     { label: "Open on SoundCloud", action: () => openOnSoundCloud(t.permalinkUrl), disabled: !t.permalinkUrl },
