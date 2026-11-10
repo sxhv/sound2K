@@ -223,6 +223,15 @@ pub async fn get_feed(
     sc.feed(next).await
 }
 
+/// Artists you follow (for Home).
+#[tauri::command]
+pub async fn get_followings(sc: State<'_, SoundCloud>) -> AppResult<Vec<Artist>> {
+    if !sc.has_token() {
+        return Ok(Vec::new());
+    }
+    sc.followings(50).await
+}
+
 #[tauri::command]
 pub async fn follow_artist(sc: State<'_, SoundCloud>, id: u64, follow: bool) -> AppResult<()> {
     if !sc.has_token() {

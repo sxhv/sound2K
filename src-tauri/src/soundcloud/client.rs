@@ -627,6 +627,20 @@ impl SoundCloud {
         })
     }
 
+    /// People you follow (most recently followed first), up to `limit`.
+    pub async fn followings(&self, limit: u32) -> AppResult<Vec<Artist>> {
+        let page: Page<ApiUserFull> = self
+            .get_json(&format!(
+                "{API_BASE}/me/followings?limit={limit}&linked_partitioning=1"
+            ))
+            .await?;
+        Ok(page
+            .collection
+            .into_iter()
+            .map(|u| u.into_artist(Some(true)))
+            .collect())
+    }
+
     /// Ids of everyone you follow.
     async fn following_ids(&self) -> AppResult<Vec<u64>> {
         let ids: Vec<u64> = self

@@ -43,7 +43,7 @@
 
 **🔎 All of SoundCloud**
 - **Search** every track, artist and playlist on SoundCloud
-- **Home:** a start page with *Jump back in*, new tracks from artists you follow, *Because you played…*, your playlists and *Rediscover your likes*
+- **Home:** a start page with a *Continue listening* banner (with Up next), *Jump back in*, *Quick picks*, *Mixes for you* (stations built from your most-liked artists), new tracks from artists you follow, *Because you played…*, *Artists you follow*, *Recently liked* and your playlists. Cards resize to fill wide windows
 - **Artist pages** with popular tracks, uploads, reposts and playlists, plus **Follow**
 
 **🛠 Your library**

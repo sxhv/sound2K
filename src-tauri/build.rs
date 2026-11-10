@@ -51,6 +51,7 @@ const COMMANDS: &[&str] = &[
     "get_artist_playlists",
     "get_feed",
     "follow_artist",
+    "get_followings",
     "check_for_update",
     "open_update_page",
     "install_update",

@@ -41,6 +41,7 @@ export const api = {
   getArtistPlaylists: (id: number) => invoke<PlaylistSummary[]>("get_artist_playlists", { id }),
   getFeed: (next: string | null) => invoke<Paged<FeedItem>>("get_feed", { next }),
   followArtist: (id: number, follow: boolean) => invoke<void>("follow_artist", { id, follow }),
+  getFollowings: () => invoke<Artist[]>("get_followings"),
   downloadTrack: (trackId: string, permalinkUrl: string | null) => invoke<void>("download_track", { trackId, permalinkUrl }),
   relatedTracks: (trackId: string) => invoke<Track[]>("get_related_tracks", { trackId }),
   openOnSoundCloud: (url: string) => invoke<void>("open_on_soundcloud", { url }),
