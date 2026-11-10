@@ -129,7 +129,7 @@ export interface StorageInfo {
   folder: string;
 }
 
-export type TabId = "home" | "search" | "liked" | "playlists" | "queue" | "recent";
+export type TabId = "home" | "search" | "liked" | "playlists";
 
 /** A SoundCloud user (artist page, search result). */
 export interface Artist {

@@ -23,7 +23,8 @@
 ## Features
 
 **🎧 Listening**
-- Your **Liked Songs**, **Playlists**, **Queue** and **Recently Played**, with instant search, sorting and filters, even with thousands of tracks
+- Four simple tabs (**Home**, **Search**, **Liked Songs**, **Playlists**), with instant search, sorting and filters, even with thousands of tracks
+- **Up next** queue in a slide-out panel; **Recently played** on Home
 - **Crossfade** (up to 12 s), **volume levelling**, and a **10-band equalizer** with presets
 - **Autoplay** keeps the music going with similar tracks when your queue ends
 - Picks up where you left off: queue and position are restored on launch

@@ -7,24 +7,19 @@ const TABS: readonly { id: TabId; label: string }[] = [
   { id: "search", label: "Search" },
   { id: "liked", label: "Liked Songs" },
   { id: "playlists", label: "Playlists" },
-  { id: "queue", label: "Queue" },
-  { id: "recent", label: "Recently Played" },
 ];
 
 export class Tabs {
   readonly el: HTMLElement;
   private readonly buttons = new Map<TabId, HTMLButtonElement>();
-  private readonly queueBadge: HTMLElement;
 
   constructor(private readonly store: AppStore) {
     this.el = h("nav", { class: "tabs", attrs: { role: "tablist", "aria-label": "Library" } });
-    this.queueBadge = h("span", { class: "tab-badge" });
     for (const tab of TABS) {
       const btn = h("button", {
         class: "tab",
         attrs: { type: "button", role: "tab", id: `tab-${tab.id}`, "aria-controls": `panel-${tab.id}` },
       }, [h("span", { text: tab.label })]);
-      if (tab.id === "queue") btn.append(this.queueBadge);
       btn.addEventListener("click", () => this.select(tab.id));
       btn.addEventListener("keydown", (e) => this.onKey(e, tab.id));
       this.buttons.set(tab.id, btn);
@@ -63,10 +58,6 @@ export class Tabs {
         btn.setAttribute("aria-selected", String(active));
         btn.tabIndex = active ? 0 : -1;
       }
-    }
-    if (!prev || s.queue.length !== prev.queue.length) {
-      this.queueBadge.textContent = s.queue.length > 999 ? "999+" : String(s.queue.length);
-      this.queueBadge.hidden = s.queue.length === 0;
     }
   }
 }

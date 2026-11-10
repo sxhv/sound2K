@@ -27,8 +27,6 @@ import type { AppState, AppStore } from "./state";
 import type { TabId } from "./types";
 import { LikedView } from "./views/likedView";
 import { PlaylistsView } from "./views/playlistsView";
-import { QueueView } from "./views/queueView";
-import { RecentView } from "./views/recentView";
 
 interface View {
   readonly el: HTMLElement;
@@ -52,8 +50,6 @@ export function mountApp(root: HTMLElement, store: AppStore, player: Player, ver
     search: searchView,
     liked: new LikedView(store, player),
     playlists: new PlaylistsView(store, player),
-    queue: new QueueView(store, player),
-    recent: new RecentView(store, player),
   };
   const dock = new Dock(store, player, visualizer.createCanvas("visualizer-dock"));
   const content = h("main", { class: "content" }, Object.values(views).map((v) => v.el));

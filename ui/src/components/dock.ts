@@ -175,6 +175,12 @@ export class Dock {
       setFill(this.volume);
     }
 
+    if (!prev || s.queue.length !== prev.queue.length) {
+      const n = s.queue.length;
+      this.queueBtn.dataset.count = n > 999 ? "999+" : String(n);
+      this.queueBtn.classList.toggle("has-count", n > 0);
+      this.queueBtn.title = n ? `Up next (${n})` : "Up next";
+    }
     if (!prev || s.queueOpen !== prev.queueOpen) {
       this.queueBtn.classList.toggle("is-on", s.queueOpen);
       this.queueBtn.setAttribute("aria-pressed", String(s.queueOpen));

@@ -38,9 +38,12 @@ export class HomeView {
   private readonly overview: HTMLElement;
   private readonly feedList: HTMLElement;
   private readonly panel: TrackListPanel;
+  private readonly recentList: HTMLElement;
+  private readonly recentPanel: TrackListPanel;
   private readonly hello: HTMLElement;
   private readonly sections: HTMLElement;
-  private showingFeed = false;
+  /** "overview" = the start page; "feed" / "recent" = a full list. */
+  private mode: "overview" | "feed" | "recent" = "overview";
 
   // Per-visit picks, so rows don't reshuffle on every state change.
   private rediscover: Track[] = [];
@@ -74,10 +77,7 @@ export class HomeView {
       label: "Back to Home",
       icon: "back",
       class: "glass-btn icon-only",
-      onClick: () => {
-        this.showingFeed = false;
-        this.syncMode();
-      },
+      onClick: () => this.setMode("overview"),
     });
     const play = button({
       label: "Play all",
@@ -91,21 +91,51 @@ export class HomeView {
       this.panel.el,
     ]);
 
+    // --- Full recently played list ("See all" on Jump back in) ---
+    this.recentPanel = new TrackListPanel(store, player, {
+      label: "Recently played",
+      source: (s) => s.recent,
+      emptyText: () => "Nothing played yet.",
+      filtersEnabled: false,
+      sourceKey: () => "recent",
+    });
+    this.recentList = h("div", { class: "home-feed-list" }, [
+      h("div", { class: "view-header" }, [
+        button({ label: "Back to Home", icon: "back", class: "glass-btn icon-only", onClick: () => this.setMode("overview") }),
+        h("h2", { text: "Recently played" }),
+        h("div", { class: "spacer" }),
+        button({ label: "Clear history", text: "Clear history", class: "glass-btn small", onClick: () => store.set({ recent: [] }) }),
+        button({ label: "Play all", icon: "play", text: "Play", class: "glass-btn accent small", onClick: () => this.playList(this.store.get().recent, 0) }),
+      ]),
+      this.recentPanel.el,
+    ]);
+
     this.el = h("section", { class: "view home-view", attrs: { role: "tabpanel", id: "panel-home", "aria-labelledby": "tab-home" } }, [
       this.overview,
       this.feedList,
+      this.recentList,
     ]);
-    this.syncMode();
+    this.setMode("overview");
   }
 
-  private syncMode(): void {
-    this.overview.hidden = this.showingFeed;
-    this.feedList.hidden = !this.showingFeed;
-    if (this.showingFeed) this.panel.update(this.store.get(), null);
+  private setMode(mode: "overview" | "feed" | "recent"): void {
+    this.mode = mode;
+    this.overview.hidden = mode !== "overview";
+    this.feedList.hidden = mode !== "feed";
+    this.recentList.hidden = mode !== "recent";
+    const s = this.store.get();
+    if (mode === "feed") this.panel.update(s, null);
+    if (mode === "recent") this.recentPanel.update(s, null);
+    if (mode === "overview") {
+      this.rendered = false;
+      this.update(s, null);
+    }
   }
 
   jumpToCurrent(): boolean {
-    return this.showingFeed && this.panel.jumpToCurrent();
+    if (this.mode === "feed") return this.panel.jumpToCurrent();
+    if (this.mode === "recent") return this.recentPanel.jumpToCurrent();
+    return false;
   }
 
   private playList(list: readonly Track[], index: number): void {
@@ -179,7 +209,12 @@ export class HomeView {
     // Jump back in
     const recent = s.recent.slice(0, ROW_MAX);
     if (recent.length) {
-      out.push(this.section("Jump back in", recent.map((t, i) => this.trackCard(t, recent, i)), { play: () => this.playList(recent, 0) }));
+      out.push(
+        this.section("Jump back in", recent.map((t, i) => this.trackCard(t, recent, i)), {
+          play: () => this.playList(recent, 0),
+          seeAll: () => this.setMode("recent"),
+        }),
+      );
     }
 
     // New from artists you follow
@@ -190,12 +225,7 @@ export class HomeView {
       );
       out.push(
         this.section("New from artists you follow", cards.length ? cards : [this.placeholder(s.feed.loading || !s.feed.loaded ? "Loading…" : s.feed.error ? `Couldn't load: ${s.feed.error}` : "Nothing new yet. Follow some artists!")], {
-          seeAll: cards.length
-            ? () => {
-                this.showingFeed = true;
-                this.syncMode();
-              }
-            : undefined,
+          seeAll: cards.length ? () => this.setMode("feed") : undefined,
           play: cards.length ? () => this.playList(s.feed.tracks, 0) : undefined,
         }),
       );
@@ -279,12 +309,13 @@ export class HomeView {
     const inputsChanged =
       !prev || s.recent !== prev.recent || s.feed !== prev.feed || s.playlists !== prev.playlists || s.account !== prev.account || s.liked !== prev.liked || s.loading !== prev.loading;
     if (inputsChanged) this.rendered = false;
-    if (visible && !this.showingFeed && !this.rendered) {
+    if (visible && this.mode === "overview" && !this.rendered) {
       this.rendered = true;
       this.render(s);
       this.markPlaying(s, null);
     }
-    if (this.showingFeed) this.panel.update(s, prev);
+    if (this.mode === "feed") this.panel.update(s, prev);
+    if (this.mode === "recent") this.recentPanel.update(s, prev);
     this.markPlaying(s, prev);
   }
 

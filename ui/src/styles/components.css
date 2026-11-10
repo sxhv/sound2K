@@ -3737,3 +3737,25 @@ button.home-card {
 .home-sections.no-anim .home-card {
   animation: none;
 }
+
+/* Queue size on the dock's Up next button (the Queue tab is gone). */
+.dock .icon-btn.has-count {
+  position: relative;
+}
+
+.dock .icon-btn.has-count::after {
+  content: attr(data-count);
+  position: absolute;
+  top: -4px;
+  right: -8px;
+  min-width: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--orange);
+  color: var(--on-accent);
+  font-size: 9.5px;
+  font-weight: 800;
+  line-height: 15px;
+  text-align: center;
+  pointer-events: none;
+}

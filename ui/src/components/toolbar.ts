@@ -184,17 +184,13 @@ export class Toolbar {
   }
 
   update(s: AppState, prev: AppState | null): void {
-    // Queue has its own controls; Search has its own search box.
-    this.el.hidden = s.tab === "queue" || s.tab === "search" || s.tab === "home";
+    // Home is a start page; Search has its own search box.
+    this.el.hidden = s.tab === "search" || s.tab === "home";
     const trackControls = showsTrackControls(s);
     this.controls.hidden = !trackControls;
 
     this.input.placeholder =
-      s.tab === "playlists" && !s.openPlaylist
-        ? "Search playlists"
-        : s.tab === "recent"
-          ? "Search recently played"
-          : "Search title or artist";
+      s.tab === "playlists" && !s.openPlaylist ? "Search playlists" : "Search title or artist";
     if ((!prev || s.search !== prev.search) && this.input.value !== s.search) this.input.value = s.search;
 
     if (!prev || s.sort !== prev.sort) this.sortLabel.textContent = SORT_LABELS[s.sort];
