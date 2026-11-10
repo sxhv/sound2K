@@ -10,7 +10,7 @@ use crate::errors::{AppError, AppResult};
 use crate::history;
 use crate::library::mock;
 use crate::library::models::{Account, Artist, FeedItem, Paged, PlaylistSummary, Track};
-use crate::local_likes;
+use crate::local_store;
 use crate::player::buffer::SharedBuffer;
 use crate::player::decode::StreamDecoder;
 use crate::player::dsp::DspSettings;
@@ -182,6 +182,7 @@ pub async fn search_playlists(
 /// An artist by id, or by their soundcloud.com profile address.
 #[tauri::command]
 pub async fn get_artist(
+    app: AppHandle,
     sc: State<'_, SoundCloud>,
     id: Option<u64>,
     profile_url: Option<String>,
@@ -191,7 +192,12 @@ pub async fn get_artist(
         (None, Some(url)) => sc.resolve_artist(&url).await?,
         (None, None) => return Err(AppError::NotFound("artist".into())),
     };
-    sc.artist(id).await
+    let mut artist = sc.artist(id).await?;
+    let account = local_account(&app, &sc).await?;
+    if local_store::load(&app, account).is_following(artist.id) {
+        artist.following = Some(true);
+    }
+    Ok(artist)
 }
 
 /// `section`: "popular", "tracks" or "reposts".
@@ -228,75 +234,84 @@ pub async fn get_feed(
 
 /// Artists you follow (for Home).
 #[tauri::command]
-pub async fn get_followings(sc: State<'_, SoundCloud>) -> AppResult<Vec<Artist>> {
-    if !sc.has_token() {
-        return Ok(Vec::new());
+pub async fn get_followings(app: AppHandle, sc: State<'_, SoundCloud>) -> AppResult<Vec<Artist>> {
+    let account = local_account(&app, &sc).await?;
+    let mut list = local_store::load(&app, account).follows;
+    if sc.has_token() {
+        // SoundCloud follows too; if that fails, still show the local ones.
+        if let Ok(remote) = sc.followings(50).await {
+            for a in remote {
+                if !list.iter().any(|x| x.id == a.id) {
+                    list.push(a);
+                }
+            }
+        }
     }
-    sc.followings(50).await
+    Ok(list)
 }
 
 #[tauri::command]
-pub async fn follow_artist(sc: State<'_, SoundCloud>, id: u64, follow: bool) -> AppResult<()> {
-    if !sc.has_token() {
-        return Err(AppError::Auth("Sign in to follow artists.".into()));
+pub async fn follow_artist(
+    app: AppHandle,
+    sc: State<'_, SoundCloud>,
+    artist: Artist,
+    follow: bool,
+) -> AppResult<()> {
+    // Saved in Sound2K: SoundCloud refuses follows sent by apps.
+    let account = local_account(&app, &sc).await?;
+    let mut data = local_store::load(&app, account);
+    if !follow && !data.is_following(artist.id) {
+        return Err(AppError::Api(
+            "You follow them on SoundCloud itself; unfollow them on soundcloud.com.".into(),
+        ));
     }
-    sc.set_follow(id, follow).await
+    data.set_follow(artist, follow);
+    local_store::save(&app, account, &data)
 }
 
 // --- Playlist editing ------------------------------------------------------
 
-fn numeric_playlist_id(id: &str) -> AppResult<u64> {
-    id.strip_prefix("sc-playlist:")
-        .and_then(|n| n.parse::<u64>().ok())
-        .ok_or_else(|| AppError::Api("Only SoundCloud playlists can be edited.".into()))
-}
-
-fn require_sign_in(sc: &SoundCloud) -> AppResult<()> {
+/// The account whose Sound2K library (likes, follows, playlists) is used:
+/// the signed-in user, or 0 for the sample library.
+async fn local_account(app: &AppHandle, sc: &SoundCloud) -> AppResult<u64> {
     if sc.has_token() {
-        Ok(())
+        account_id(app, sc).await
     } else {
-        Err(AppError::Auth("Sign in to edit playlists.".into()))
+        Ok(0)
     }
 }
 
-/// Keep the cached playlist list in step with an edit.
-fn cache_playlist(app: &AppHandle, summary: Option<&PlaylistSummary>, removed_id: Option<&str>) {
-    let Some(mut list) = cache::read::<Vec<PlaylistSummary>>(app, CacheFile::Playlists) else {
-        return;
-    };
-    if let Some(id) = removed_id {
-        list.retain(|p| p.id != id);
-    }
-    if let Some(s) = summary {
-        match list.iter_mut().find(|p| p.id == s.id) {
-            Some(existing) => *existing = s.clone(),
-            None => list.insert(0, s.clone()),
-        }
-    }
-    let _ = cache::write(app, CacheFile::Playlists, &list);
+/// Owner name shown on your Sound2K playlists.
+fn local_owner(app: &AppHandle) -> String {
+    cache::read::<Account>(app, CacheFile::Account)
+        .map(|a| a.username)
+        .unwrap_or_else(|| "You".into())
 }
 
+fn local_playlist_id(id: &str) -> AppResult<&str> {
+    if id.starts_with(local_store::PLAYLIST_PREFIX) {
+        Ok(id)
+    } else {
+        Err(AppError::Api(
+            "SoundCloud playlists can't be edited from apps. Copy it to Sound2K to edit it.".into(),
+        ))
+    }
+}
+
+/// Create a Sound2K playlist (stored on this PC), optionally with tracks.
 #[tauri::command]
 pub async fn create_playlist(
     app: AppHandle,
     sc: State<'_, SoundCloud>,
     title: String,
-    private: bool,
-    track_ids: Vec<String>,
+    tracks: Vec<Track>,
 ) -> AppResult<PlaylistSummary> {
-    require_sign_in(&sc)?;
-    let title = title.trim();
-    if title.is_empty() || title.chars().count() > 100 {
-        return Err(AppError::Api(
-            "Playlist names must be 1–100 characters.".into(),
-        ));
-    }
-    let ids = track_ids
-        .iter()
-        .map(|id| numeric_track_id(id))
-        .collect::<AppResult<Vec<u64>>>()?;
-    let summary = sc.create_playlist(title, private, &ids).await?;
-    cache_playlist(&app, Some(&summary), None);
+    let account = local_account(&app, &sc).await?;
+    let mut data = local_store::load(&app, account);
+    let summary = data
+        .create_playlist(&title, tracks)?
+        .summary(&local_owner(&app), account);
+    local_store::save(&app, account, &data)?;
     Ok(summary)
 }
 
@@ -307,17 +322,13 @@ pub async fn rename_playlist(
     playlist_id: String,
     title: String,
 ) -> AppResult<PlaylistSummary> {
-    require_sign_in(&sc)?;
-    let title = title.trim();
-    if title.is_empty() || title.chars().count() > 100 {
-        return Err(AppError::Api(
-            "Playlist names must be 1–100 characters.".into(),
-        ));
-    }
-    let summary = sc
-        .rename_playlist(numeric_playlist_id(&playlist_id)?, title)
-        .await?;
-    cache_playlist(&app, Some(&summary), None);
+    let id = local_playlist_id(&playlist_id)?;
+    let account = local_account(&app, &sc).await?;
+    let mut data = local_store::load(&app, account);
+    let playlist = data.playlist_mut(id)?;
+    playlist.rename(&title)?;
+    let summary = playlist.summary(&local_owner(&app), account);
+    local_store::save(&app, account, &data)?;
     Ok(summary)
 }
 
@@ -327,20 +338,22 @@ pub async fn edit_playlist_track(
     app: AppHandle,
     sc: State<'_, SoundCloud>,
     playlist_id: String,
-    track_id: String,
+    track: Track,
     action: String,
 ) -> AppResult<PlaylistSummary> {
-    require_sign_in(&sc)?;
-    let pid = numeric_playlist_id(&playlist_id)?;
-    let tid = numeric_track_id(&track_id)?;
-    let summary = match action.as_str() {
-        "add" => sc.add_to_playlist(pid, tid).await?,
-        "remove" => sc.remove_from_playlist(pid, tid).await?,
-        "up" => sc.move_in_playlist(pid, tid, -1).await?,
-        "down" => sc.move_in_playlist(pid, tid, 1).await?,
+    let id = local_playlist_id(&playlist_id)?;
+    let account = local_account(&app, &sc).await?;
+    let mut data = local_store::load(&app, account);
+    let playlist = data.playlist_mut(id)?;
+    match action.as_str() {
+        "add" => playlist.add(track)?,
+        "remove" => playlist.remove(&track.id),
+        "up" => playlist.nudge(&track.id, -1),
+        "down" => playlist.nudge(&track.id, 1),
         _ => return Err(AppError::Api("Unknown playlist action.".into())),
-    };
-    cache_playlist(&app, Some(&summary), None);
+    }
+    let summary = playlist.summary(&local_owner(&app), account);
+    local_store::save(&app, account, &data)?;
     Ok(summary)
 }
 
@@ -354,16 +367,13 @@ pub async fn move_playlist_track(
     track_id: String,
     before_id: Option<String>,
 ) -> AppResult<PlaylistSummary> {
-    require_sign_in(&sc)?;
-    let before = before_id.as_deref().map(numeric_track_id).transpose()?;
-    let summary = sc
-        .move_in_playlist_before(
-            numeric_playlist_id(&playlist_id)?,
-            numeric_track_id(&track_id)?,
-            before,
-        )
-        .await?;
-    cache_playlist(&app, Some(&summary), None);
+    let id = local_playlist_id(&playlist_id)?;
+    let account = local_account(&app, &sc).await?;
+    let mut data = local_store::load(&app, account);
+    let playlist = data.playlist_mut(id)?;
+    playlist.move_before(&track_id, before_id.as_deref());
+    let summary = playlist.summary(&local_owner(&app), account);
+    local_store::save(&app, account, &data)?;
     Ok(summary)
 }
 
@@ -373,11 +383,11 @@ pub async fn delete_playlist(
     sc: State<'_, SoundCloud>,
     playlist_id: String,
 ) -> AppResult<()> {
-    require_sign_in(&sc)?;
-    sc.delete_playlist(numeric_playlist_id(&playlist_id)?)
-        .await?;
-    cache_playlist(&app, None, Some(&playlist_id));
-    Ok(())
+    let id = local_playlist_id(&playlist_id)?;
+    let account = local_account(&app, &sc).await?;
+    let mut data = local_store::load(&app, account);
+    data.delete_playlist(id);
+    local_store::save(&app, account, &data)
 }
 
 /// Theme colour of a track's artwork (see colour.rs). Only fetches from
@@ -417,19 +427,24 @@ pub async fn get_liked_tracks(
     refresh: bool,
 ) -> AppResult<Vec<Track>> {
     if !sc.has_token() {
-        let local = local_likes::load(&app, 0);
-        return Ok(local_likes::apply(mock::library().liked.clone(), &local));
+        return Ok(mock::library().liked.clone());
     }
-    let user_id = account_id(&app, &sc).await?;
-    let local = local_likes::load(&app, user_id);
     if !refresh {
         if let Some(cached) = cache::read::<Vec<Track>>(&app, CacheFile::Likes) {
-            return Ok(local_likes::apply(cached, &local));
+            return Ok(cached);
         }
     }
+    let user_id = account_id(&app, &sc).await?;
     let tracks = sc.liked_tracks(user_id).await?;
     cache::write(&app, CacheFile::Likes, &tracks)?;
-    Ok(local_likes::apply(tracks, &local))
+    Ok(tracks)
+}
+
+/// Songs liked in Sound2K (kept on this PC, separate from SoundCloud likes).
+#[tauri::command]
+pub async fn get_local_likes(app: AppHandle, sc: State<'_, SoundCloud>) -> AppResult<Vec<Track>> {
+    let account = local_account(&app, &sc).await?;
+    Ok(local_store::load(&app, account).likes)
 }
 
 #[tauri::command]
@@ -438,23 +453,46 @@ pub async fn get_playlists(
     sc: State<'_, SoundCloud>,
     refresh: bool,
 ) -> AppResult<Vec<PlaylistSummary>> {
+    // Your Sound2K playlists first, then SoundCloud's.
+    let account = local_account(&app, &sc).await?;
+    let owner = local_owner(&app);
+    let mut list: Vec<PlaylistSummary> = local_store::load(&app, account)
+        .playlists
+        .iter()
+        .map(|p| p.summary(&owner, account))
+        .collect();
     if !sc.has_token() {
-        return Ok(mock::library().playlist_summaries());
+        list.extend(mock::library().playlist_summaries());
+        return Ok(list);
     }
-    if !refresh {
-        if let Some(cached) = cache::read::<Vec<PlaylistSummary>>(&app, CacheFile::Playlists) {
-            return Ok(cached);
+    let remote = match cache::read::<Vec<PlaylistSummary>>(&app, CacheFile::Playlists) {
+        Some(cached) if !refresh => cached,
+        _ => {
+            let fresh = sc.playlists(account).await?;
+            cache::write(&app, CacheFile::Playlists, &fresh)?;
+            fresh
         }
-    }
-    let user_id = account_id(&app, &sc).await?;
-    let playlists = sc.playlists(user_id).await?;
-    cache::write(&app, CacheFile::Playlists, &playlists)?;
-    Ok(playlists)
+    };
+    list.extend(remote);
+    Ok(list)
 }
 
 /// Tracks of one playlist, in playlist order.
 #[tauri::command]
-pub async fn get_playlist_tracks(sc: State<'_, SoundCloud>, id: String) -> AppResult<Vec<Track>> {
+pub async fn get_playlist_tracks(
+    app: AppHandle,
+    sc: State<'_, SoundCloud>,
+    id: String,
+) -> AppResult<Vec<Track>> {
+    if id.starts_with(local_store::PLAYLIST_PREFIX) {
+        let account = local_account(&app, &sc).await?;
+        return local_store::load(&app, account)
+            .playlists
+            .into_iter()
+            .find(|p| p.id == id)
+            .map(|p| p.tracks)
+            .ok_or_else(|| AppError::NotFound("playlist".into()));
+    }
     if id.starts_with("mock:") {
         return mock::library()
             .playlist_tracks(&id)
@@ -723,18 +761,10 @@ pub async fn like_track(
     like: bool,
 ) -> AppResult<()> {
     // Saved in Sound2K only: SoundCloud refuses likes sent by apps.
-    let account = if sc.has_token() {
-        account_id(&app, &sc).await?
-    } else {
-        0
-    };
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_millis() as i64)
-        .ok();
-    let mut local = local_likes::load(&app, account);
-    local_likes::set(&mut local, track, like, now);
-    local_likes::save(&app, account, &local)
+    let account = local_account(&app, &sc).await?;
+    let mut data = local_store::load(&app, account);
+    data.set_like(track, like);
+    local_store::save(&app, account, &data)
 }
 
 /// Similar tracks for autoplay (empty for the sample library).

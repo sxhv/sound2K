@@ -32,6 +32,9 @@ export interface OpenPlaylist {
   loading: boolean;
 }
 
+/** Which likes the Liked Songs tab shows. */
+export type LikedSource = "all" | "sound2k" | "soundcloud";
+
 export type ArtistSection = "popular" | "tracks" | "albums" | "eps" | "playlists" | "reposts";
 /** Sections that list albums / playlists rather than tracks. */
 export const SET_SECTIONS: ReadonlySet<ArtistSection> = new Set(["albums", "eps", "playlists"]);
@@ -92,8 +95,18 @@ export interface AppState {
   /** A sign-in window is open. */
   signingIn: boolean;
 
+  /** Your SoundCloud likes (read-only: SoundCloud doesn't accept likes from apps). */
   liked: Track[];
+  /** Songs liked in Sound2K (stored on this PC). */
+  localLiked: Track[];
+  /** Both lists combined (Sound2K likes first), newest first. */
+  allLiked: Track[];
+  /** Liked anywhere (fills the hearts). */
   likedIds: ReadonlySet<string>;
+  /** Which likes the Liked Songs tab shows. */
+  likedSource: LikedSource;
+  /** Bumped when you follow / unfollow (Home reloads its artists row). */
+  followsVersion: number;
   playlists: PlaylistSummary[];
   openPlaylist: OpenPlaylist | null;
 
@@ -183,6 +196,10 @@ export function createInitialState(settings: Settings): AppState {
     syncing: false,
     signingIn: false,
     liked: [],
+    localLiked: [],
+    allLiked: [],
+    likedSource: "all",
+    followsVersion: 0,
     likedIds: new Set(),
     playlists: [],
     openPlaylist: null,
@@ -227,4 +244,9 @@ export function createInitialState(settings: Settings): AppState {
       repeat: "off",
     },
   };
+}
+
+/** The likes the Liked Songs tab is showing. */
+export function likedList(s: Pick<AppState, "likedSource" | "allLiked" | "localLiked" | "liked">): Track[] {
+  return s.likedSource === "sound2k" ? s.localLiked : s.likedSource === "soundcloud" ? s.liked : s.allLiked;
 }

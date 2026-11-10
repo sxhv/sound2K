@@ -117,7 +117,7 @@ export class HomeView {
   private similarSeed: Track | null = null;
   private similar: Track[] | null = null;
   private followings: Artist[] | null = null;
-  private followingsFor: number | null = null;
+  private followingsFor: string | null = null;
 
   constructor(
     private readonly store: AppStore,
@@ -442,7 +442,7 @@ export class HomeView {
     }
 
     // Mixes for you
-    const mixes = topMixes(s.liked, MIX_COUNT);
+    const mixes = topMixes(s.allLiked, MIX_COUNT);
     if (mixes.length) {
       out.push(this.section("Mixes for you", mixes.map((m) => this.mixCard(m)), { subtitle: "Stations from your most-liked artists" }));
     }
@@ -467,13 +467,13 @@ export class HomeView {
     }
 
     // Artists you follow (round)
-    if (s.account) {
+    if (s.account || this.followings?.length) {
       const body = this.followings === null ? this.shimmer(8, true) : this.followings.map((a) => this.artistCard(a));
       if (body.length) out.push(this.section("Artists you follow", body));
     }
 
     // Recently liked
-    const newest = s.liked.slice(0, ROW_MAX);
+    const newest = s.allLiked.slice(0, ROW_MAX);
     if (newest.length) out.push(this.section("Recently liked", newest.map((t, i) => this.trackCard(t, newest, i))));
 
     // Your playlists
@@ -502,9 +502,10 @@ export class HomeView {
     const visible = s.tab === "home" && s.page === "library";
     if (visible && s.account && !s.feed.loaded && !s.feed.loading) queueMicrotask(() => void loadFeed(this.store));
 
-    // Artists you follow: once per account.
-    const me = s.account?.id ?? null;
-    if (visible && me !== null && this.followingsFor !== me) {
+    // Artists you follow (SoundCloud + Sound2K): once per account, and
+    // again after you follow / unfollow someone.
+    const me = `${s.account?.id ?? 0}:${s.followsVersion}`;
+    if (visible && this.followingsFor !== me) {
       this.followingsFor = me;
       this.followings = null;
       api
@@ -523,10 +524,11 @@ export class HomeView {
     }
 
     // Quick picks: a fresh random handful whenever the library reloads.
+    // (Reshuffle when the library reloads, not on every like.)
     if (s.liked !== this.quickFrom) {
       this.quickFrom = s.liked;
       this.quickPicks = shuffled(
-        s.liked.filter((t) => t.playable),
+        s.allLiked.filter((t) => t.playable),
         QUICK_PICKS,
       );
     }
@@ -550,7 +552,7 @@ export class HomeView {
     }
 
     const inputsChanged =
-      !prev || s.recent !== prev.recent || s.feed !== prev.feed || s.playlists !== prev.playlists || s.account !== prev.account || s.liked !== prev.liked || s.loading !== prev.loading;
+      !prev || s.recent !== prev.recent || s.feed !== prev.feed || s.playlists !== prev.playlists || s.account !== prev.account || s.allLiked !== prev.allLiked || s.loading !== prev.loading;
     if (inputsChanged) this.rendered = false;
     if (visible && this.mode === "overview") {
       this.updateBanner(s, prev);

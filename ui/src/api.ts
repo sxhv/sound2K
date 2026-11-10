@@ -18,11 +18,11 @@ export const api = {
   loadHistory: () => invoke<Track[]>("load_history"),
   saveHistory: (tracks: Track[]) => invoke<void>("save_history", { tracks }),
   likeTrack: (track: Track, like: boolean) => invoke<void>("like_track", { track, like }),
-  createPlaylist: (title: string, isPrivate: boolean, trackIds: string[]) =>
-    invoke<PlaylistSummary>("create_playlist", { title, private: isPrivate, trackIds }),
+  localLikes: () => invoke<Track[]>("get_local_likes"),
+  createPlaylist: (title: string, tracks: Track[]) => invoke<PlaylistSummary>("create_playlist", { title, tracks }),
   renamePlaylist: (playlistId: string, title: string) => invoke<PlaylistSummary>("rename_playlist", { playlistId, title }),
-  editPlaylistTrack: (playlistId: string, trackId: string, action: "add" | "remove" | "up" | "down") =>
-    invoke<PlaylistSummary>("edit_playlist_track", { playlistId, trackId, action }),
+  editPlaylistTrack: (playlistId: string, track: Track, action: "add" | "remove" | "up" | "down") =>
+    invoke<PlaylistSummary>("edit_playlist_track", { playlistId, track, action }),
   deletePlaylist: (playlistId: string) => invoke<void>("delete_playlist", { playlistId }),
   movePlaylistTrack: (playlistId: string, trackId: string, beforeId: string | null) =>
     invoke<PlaylistSummary>("move_playlist_track", { playlistId, trackId, beforeId }),
@@ -40,7 +40,7 @@ export const api = {
     invoke<Paged<Track>>("get_artist_tracks", { id, section, next }),
   getArtistPlaylists: (id: number, kind: "albums" | "eps" | "playlists") => invoke<PlaylistSummary[]>("get_artist_playlists", { id, kind }),
   getFeed: (next: string | null) => invoke<Paged<FeedItem>>("get_feed", { next }),
-  followArtist: (id: number, follow: boolean) => invoke<void>("follow_artist", { id, follow }),
+  followArtist: (artist: Artist, follow: boolean) => invoke<void>("follow_artist", { artist, follow }),
   getFollowings: () => invoke<Artist[]>("get_followings"),
   downloadTrack: (trackId: string, permalinkUrl: string | null) => invoke<void>("download_track", { trackId, permalinkUrl }),
   relatedTracks: (trackId: string) => invoke<Track[]>("get_related_tracks", { trackId }),

@@ -3,10 +3,9 @@
 import { api, errorKind, errorMessage } from "./api";
 import { toast } from "./components/toast";
 import type { Player } from "./player/player";
-import type { AppStore } from "./state";
+import type { AppState, AppStore } from "./state";
 import type { Track } from "./types";
 
-/** Load likes + playlists. `refresh: false` uses the local cache if present. */
 /** The first time you like something, explain where likes are kept. */
 function explainLocalLikes(): void {
   try {
@@ -15,15 +14,24 @@ function explainLocalLikes(): void {
   } catch {
     return;
   }
-  toast("Likes are saved in Sound2K on this PC. SoundCloud doesn't accept likes from apps, so they won't show on soundcloud.com.");
+  toast("Saved to your Sound2K likes on this PC. SoundCloud doesn't accept likes from apps, so they're kept separate (Liked Songs → Sound2K).");
 }
 
+/** State for both like lists: SoundCloud likes and Sound2K likes, the two
+ * combined (Sound2K likes first; a song in both is listed once) and the ids
+ * that fill the hearts. */
+export function likesState(liked: Track[], localLiked: Track[]): Pick<AppState, "liked" | "localLiked" | "allLiked" | "likedIds"> {
+  const localIds = new Set(localLiked.map((t) => t.id));
+  const allLiked = [...localLiked, ...liked.filter((t) => !localIds.has(t.id))];
+  return { liked, localLiked, allLiked, likedIds: new Set(allLiked.map((t) => t.id)) };
+}
+
+/** Load likes + playlists. `refresh: false` uses the local cache if present. */
 export async function loadLibrary(store: AppStore, refresh: boolean): Promise<void> {
-  const [liked, playlists] = await Promise.all([api.likedTracks(refresh), api.playlists(refresh)]);
+  const [liked, localLiked, playlists] = await Promise.all([api.likedTracks(refresh), api.localLikes(), api.playlists(refresh)]);
   const s = store.get();
   store.set({
-    liked,
-    likedIds: new Set(liked.map((t) => t.id)),
+    ...likesState(liked, localLiked),
     playlists,
     // Re-open the same playlist's summary if it still exists.
     openPlaylist: s.openPlaylist && playlists.some((p) => p.id === s.openPlaylist?.summary.id) ? s.openPlaylist : null,
@@ -53,8 +61,7 @@ export async function syncLibrary(store: AppStore): Promise<void> {
 function resetLibraryState(store: AppStore, player: Player): void {
   player.stop();
   store.set({
-    liked: [],
-    likedIds: new Set(),
+    ...likesState([], []),
     playlists: [],
     openPlaylist: null,
     queue: [],
@@ -100,22 +107,23 @@ export async function signOut(store: AppStore, player: Player): Promise<void> {
   }
 }
 
-/** Like or unlike a track on SoundCloud (updates the UI immediately). */
+/** Like or unlike a track in Sound2K (stored on this PC; updates at once).
+ * Songs liked on SoundCloud itself can only be unliked on soundcloud.com. */
 export async function toggleLike(store: AppStore, track: Track): Promise<void> {
   const before = store.get();
-  const wasLiked = before.likedIds.has(track.id);
-  const setLiked = (liked: Track[]): void => store.set({ liked, likedIds: new Set(liked.map((t) => t.id)) });
-
-  const without = before.liked.filter((t) => t.id !== track.id);
-  setLiked(wasLiked ? without : [{ ...track, likedAtMs: Date.now() }, ...without]);
+  const localLiked = before.localLiked.some((t) => t.id === track.id);
+  if (!localLiked && before.likedIds.has(track.id)) {
+    toast("This song is liked on SoundCloud itself. Unlike it on soundcloud.com (⋯ → Open on SoundCloud).");
+    return;
+  }
+  const without = before.localLiked.filter((t) => t.id !== track.id);
+  store.set(likesState(before.liked, localLiked ? without : [{ ...track, likedAtMs: Date.now() }, ...without]));
   try {
-    await api.likeTrack(track, !wasLiked);
+    await api.likeTrack(track, !localLiked);
     explainLocalLikes();
   } catch (err) {
-    // Put things back the way they were.
-    const now = store.get().liked.filter((t) => t.id !== track.id);
-    setLiked(wasLiked ? [track, ...now] : now);
-    toast(`Couldn't ${wasLiked ? "unlike" : "like"} “${track.title}”: ${errorMessage(err)}`, "error");
+    store.set(likesState(store.get().liked, before.localLiked));
+    toast(`Couldn't ${localLiked ? "unlike" : "like"} “${track.title}”: ${errorMessage(err)}`, "error");
   }
 }
 

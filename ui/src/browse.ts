@@ -148,21 +148,22 @@ export async function loadArtistSection(store: AppStore, section: ArtistSection,
 export async function toggleFollow(store: AppStore): Promise<void> {
   const a = store.get().artist;
   if (!a?.info) return;
-  if (!store.get().account) {
-    toast("Sign in to SoundCloud to follow artists.");
-    return;
-  }
-  const was = a.info.following === true;
-  const set = (following: boolean, delta: number): void => {
+  // Saved in Sound2K (SoundCloud doesn't accept follows from apps), so the
+  // SoundCloud follower count doesn't change.
+  const info = a.info;
+  const was = info.following === true;
+  const set = (following: boolean): void => {
     const cur = store.get().artist;
-    if (cur?.info?.id !== a.info?.id || !cur?.info) return;
-    store.set({ artist: { ...cur, info: { ...cur.info, following, followers: Math.max(0, cur.info.followers + delta) } } });
+    if (cur?.info?.id !== info.id || !cur?.info) return;
+    store.set({ artist: { ...cur, info: { ...cur.info, following } } });
   };
-  set(!was, was ? -1 : 1); // optimistic
+  set(!was);
   try {
-    await api.followArtist(a.info.id, !was);
+    await api.followArtist({ ...info, following: null }, !was);
+    store.set({ followsVersion: store.get().followsVersion + 1 });
+    if (!was) toast(`Following ${info.username} in Sound2K.`);
   } catch (e) {
-    set(was, was ? 1 : -1);
+    set(was);
     toast(`Couldn't ${was ? "unfollow" : "follow"}: ${errorMessage(e)}`, "error");
   }
 }

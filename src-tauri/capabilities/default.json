@@ -62,6 +62,7 @@
     "allow-get-feed",
     "allow-follow-artist",
     "allow-get-followings",
+    "allow-get-local-likes",
     "allow-check-for-update",
     "allow-open-update-page",
     "allow-install-update"

@@ -8,7 +8,7 @@ mod discord;
 mod errors;
 mod history;
 mod library;
-mod local_likes;
+mod local_store;
 mod media;
 mod paths;
 mod player;
@@ -102,6 +102,7 @@ pub fn run() {
             commands::get_feed,
             commands::follow_artist,
             commands::get_followings,
+            commands::get_local_likes,
             commands::check_for_update,
             commands::open_update_page,
             commands::install_update,

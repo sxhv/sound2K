@@ -1,5 +1,6 @@
-// Creating and editing your own SoundCloud playlists. Changes go to
-// SoundCloud first; the app's lists update when SoundCloud confirms.
+// Creating and editing your Sound2K playlists. They're stored on this PC:
+// SoundCloud doesn't accept playlist changes from apps, so SoundCloud
+// playlists are read-only here (copy one to Sound2K to edit it).
 import { api, errorMessage } from "./api";
 import { confirmDialog, promptDialog } from "./components/dialog";
 import { closePopover, openPopover } from "./components/popover";
@@ -11,22 +12,19 @@ import { toast } from "./components/toast";
 import type { AppStore } from "./state";
 import type { PlaylistSummary, Track } from "./types";
 
-/** Playlists you can edit (your own SoundCloud playlists). */
+const LOCAL_PREFIX = "local-playlist:";
+
+export function isLocalPlaylist(p: PlaylistSummary): boolean {
+  return p.id.startsWith(LOCAL_PREFIX);
+}
+
+/** Playlists you can edit: your Sound2K playlists. */
 export function ownPlaylists(store: AppStore): PlaylistSummary[] {
-  const s = store.get();
-  const me = s.account?.id;
-  return me ? s.playlists.filter((p) => p.ownerId === me && p.id.startsWith("sc-playlist:")) : [];
+  return store.get().playlists.filter(isLocalPlaylist);
 }
 
-export function canEdit(store: AppStore, p: PlaylistSummary): boolean {
-  const me = store.get().account?.id;
-  return me !== undefined && p.ownerId === me && p.id.startsWith("sc-playlist:");
-}
-
-function needAccount(store: AppStore): boolean {
-  if (store.get().account) return true;
-  toast("Sign in to SoundCloud to make playlists.");
-  return false;
+export function canEdit(_store: AppStore, p: PlaylistSummary): boolean {
+  return isLocalPlaylist(p);
 }
 
 /** Put an updated summary into the store (and the open playlist). */
@@ -42,11 +40,10 @@ function applySummary(store: AppStore, summary: PlaylistSummary, tracks?: Track[
 }
 
 export async function createPlaylist(store: AppStore, withTracks: Track[] = []): Promise<PlaylistSummary | null> {
-  if (!needAccount(store)) return null;
-  const answer = await promptDialog({ title: "New playlist", confirm: "Create", privacy: true });
+  const answer = await promptDialog({ title: "New playlist", confirm: "Create" });
   if (!answer) return null;
   try {
-    const summary = await api.createPlaylist(answer.text, answer.private, withTracks.map((t) => t.id));
+    const summary = await api.createPlaylist(answer.text, withTracks);
     applySummary(store, summary);
     toast(`Created “${summary.title}”.`);
     return summary;
@@ -67,7 +64,7 @@ export async function renamePlaylist(store: AppStore, p: PlaylistSummary): Promi
 }
 
 export async function deletePlaylist(store: AppStore, p: PlaylistSummary): Promise<void> {
-  if (!(await confirmDialog(`Delete “${p.title}” from SoundCloud?`, "Delete"))) return;
+  if (!(await confirmDialog(`Delete the playlist “${p.title}”?`, "Delete"))) return;
   try {
     await api.deletePlaylist(p.id);
     const s = store.get();
@@ -83,7 +80,7 @@ export async function deletePlaylist(store: AppStore, p: PlaylistSummary): Promi
 
 export async function addToPlaylist(store: AppStore, p: PlaylistSummary, t: Track): Promise<void> {
   try {
-    const summary = await api.editPlaylistTrack(p.id, t.id, "add");
+    const summary = await api.editPlaylistTrack(p.id, t, "add");
     const open = store.get().openPlaylist;
     const tracks = open?.summary.id === p.id && !open.tracks.some((x) => x.id === t.id) ? [...open.tracks, t] : undefined;
     applySummary(store, summary, tracks);
@@ -96,10 +93,10 @@ export async function addToPlaylist(store: AppStore, p: PlaylistSummary, t: Trac
 export async function removeFromPlaylist(store: AppStore, p: PlaylistSummary, t: Track): Promise<void> {
   const open = store.get().openPlaylist;
   const before = open?.summary.id === p.id ? open.tracks : null;
-  // Optimistic: hide it now, put it back if SoundCloud says no.
+  // Hide it now; put it back if saving fails.
   if (before) store.set({ openPlaylist: { ...open!, tracks: before.filter((x) => x.id !== t.id) } });
   try {
-    applySummary(store, await api.editPlaylistTrack(p.id, t.id, "remove"));
+    applySummary(store, await api.editPlaylistTrack(p.id, t, "remove"));
   } catch (err) {
     const now = store.get().openPlaylist;
     if (before && now?.summary.id === p.id) store.set({ openPlaylist: { ...now, tracks: before } });
@@ -118,7 +115,7 @@ export async function moveInPlaylist(store: AppStore, p: PlaylistSummary, t: Tra
   [moved[i], moved[j]] = [moved[j] as Track, moved[i] as Track];
   store.set({ openPlaylist: { ...open, tracks: moved } });
   try {
-    applySummary(store, await api.editPlaylistTrack(p.id, t.id, dir));
+    applySummary(store, await api.editPlaylistTrack(p.id, t, dir));
   } catch (err) {
     const now = store.get().openPlaylist;
     if (now?.summary.id === p.id) store.set({ openPlaylist: { ...now, tracks: before } });
@@ -147,7 +144,6 @@ export async function moveTrackTo(store: AppStore, p: PlaylistSummary, t: Track,
 
 /** "Add to playlist" picker: your playlists with their covers. */
 export function showAddToPlaylist(store: AppStore, anchor: HTMLElement, t: Track): void {
-  if (!needAccount(store)) return;
   const mine = ownPlaylists(store);
 
   const list = h("div", { class: "pl-picker-list", attrs: { role: "listbox", "aria-label": "Your playlists" } });
@@ -190,4 +186,18 @@ export function showAddToPlaylist(store: AppStore, anchor: HTMLElement, t: Track
   parts.push(list);
   // Let the ⋯ menu finish closing first.
   window.setTimeout(() => openPopover(anchor, h("div", { class: "pl-picker" }, parts), { align: "end", className: "popover-picker" }), 0);
+}
+
+/** Copy a playlist (e.g. a SoundCloud one) into a new Sound2K playlist you
+ * can edit. */
+export async function copyToSound2K(store: AppStore, p: PlaylistSummary, tracks: readonly Track[]): Promise<void> {
+  const answer = await promptDialog({ title: "Copy to Sound2K", value: p.title, confirm: "Copy" });
+  if (!answer) return;
+  try {
+    const summary = await api.createPlaylist(answer.text, [...tracks]);
+    applySummary(store, summary);
+    toast(`Copied to “${summary.title}” (${plural(summary.trackCount, "track")}). You can edit it now.`);
+  } catch (err) {
+    toast(`Couldn't copy the playlist: ${errorMessage(err)}`, "error");
+  }
 }

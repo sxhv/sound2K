@@ -9,7 +9,7 @@ import {
   uniqueArtists,
 } from "../lib/filterSort";
 import { icon } from "../lib/icons";
-import { DEFAULT_FILTERS, type AppState, type AppStore } from "../state";
+import { DEFAULT_FILTERS, likedList, type AppState, type AppStore } from "../state";
 import type { BoolFilterKey, FilterPrefs, Track } from "../types";
 import { closePopover, isPopoverOpenFor, openPopover } from "./popover";
 
@@ -17,7 +17,7 @@ const SEARCH_DEBOUNCE_MS = 80;
 
 function trackSource(s: AppState): readonly Track[] {
   if (s.tab === "playlists") return s.openPlaylist?.tracks ?? [];
-  return s.liked;
+  return likedList(s);
 }
 
 function showsTrackControls(s: AppState): boolean {

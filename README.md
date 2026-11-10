@@ -50,10 +50,14 @@
 - **Home:** a start page with a *Continue listening* banner (with Up next), *Jump back in*, *Quick picks*, *Mixes for you* (stations built from your most-liked artists), new tracks from artists you follow, *Because you played…*, *Artists you follow*, *Recently liked* and your playlists. Cards resize to fill wide windows
 - **Artist pages** with Popular, Recent, Albums, EPs & Singles, Playlists and Reposts, plus search and sorting (most played, title, length) and **Follow**
 - **Play counts** on every song
-- **Likes saved in Sound2K:** SoundCloud doesn't accept likes from apps, so liking/unliking in Sound2K is stored on your PC (your SoundCloud likes still show, plus anything you like here). *Repost on SoundCloud…* opens the track on soundcloud.com
+- **Your Sound2K library:** SoundCloud doesn't accept likes, follows or playlist changes from apps, so Sound2K keeps its own, saved on your PC:
+  - **Likes:** Liked Songs switches between *All*, *Sound2K* (liked in the app) and *SoundCloud* (your SoundCloud likes, read-only)
+  - **Follows:** follow artists in the app; they show alongside your SoundCloud follows
+  - **Playlists:** create, rename, delete and drag to reorder; *Copy to Sound2K* turns any SoundCloud playlist into one you can edit
+  - *Repost on SoundCloud…* opens the track on soundcloud.com
 
 **🛠 Your library**
-- **Like / unlike**, **create, rename and delete playlists**, add songs with a cover picker, and **drag to reorder**
+- Add songs to playlists with a cover picker
 - **Jump to the playing song** in any list (Ctrl+J)
 - **Discord status:** "Listening to …" with cover art and a *Listen on SoundCloud* button (opt-in)
 - **Download** tracks whose artist allows it, via SoundCloud's official download

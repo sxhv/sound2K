@@ -128,7 +128,7 @@ export class Player {
   togglePlay(): void {
     const { current, playing, positionMs } = this.p;
     if (!current) {
-      const liked = this.store.get().liked;
+      const liked = this.store.get().allLiked;
       const i = liked.findIndex((t) => t.playable);
       if (i >= 0) this.playFromList(liked, i);
       return;

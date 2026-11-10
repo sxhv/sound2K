@@ -5,7 +5,7 @@ import { TrackListPanel } from "../components/trackListPanel";
 import { button, h } from "../lib/dom";
 import { icon } from "../lib/icons";
 import { showMenu } from "../components/popover";
-import { canEdit, createPlaylist, deletePlaylist, moveInPlaylist, moveTrackTo, removeFromPlaylist, renamePlaylist } from "../playlistEdit";
+import { canEdit, copyToSound2K, createPlaylist, deletePlaylist, isLocalPlaylist, moveInPlaylist, moveTrackTo, removeFromPlaylist, renamePlaylist } from "../playlistEdit";
 import { searchPlaylists } from "../lib/filterSort";
 import { artUrl, cssUrl } from "../lib/artwork";
 import { formatTotal, placeholderGradient, plural } from "../lib/format";
@@ -25,6 +25,8 @@ export class PlaylistsView {
   private readonly detailMeta: HTMLElement;
   private readonly hero: HTMLElement;
   private readonly editBtn: HTMLButtonElement;
+  private readonly copyBtn: HTMLButtonElement;
+  private readonly kind = h("span", { class: "pl-kind", text: "Playlist" });
   private readonly heroBg: HTMLElement;
   private readonly panel: TrackListPanel;
 
@@ -99,6 +101,18 @@ export class PlaylistsView {
       },
     });
 
+    // SoundCloud playlists are read-only: copy one to Sound2K to edit it.
+    this.copyBtn = button({
+      label: "Copy to Sound2K (to edit it)",
+      icon: "plus",
+      text: "Copy to Sound2K",
+      class: "glass-btn small",
+      onClick: () => {
+        const open = store.get().openPlaylist;
+        if (open && !open.loading) void copyToSound2K(store, open.summary, open.tracks);
+      },
+    });
+
     // Apple-style header: big cover on a blurred copy of itself. It
     // shrinks to a compact bar once the track list is scrolled.
     this.heroBg = h("div", { class: "pl-hero-bg", attrs: { "aria-hidden": "true" } });
@@ -107,10 +121,10 @@ export class PlaylistsView {
       back,
       this.detailArt,
       h("div", { class: "detail-text" }, [
-        h("span", { class: "pl-kind", text: "Playlist" }),
+        this.kind,
         this.detailTitle,
         this.detailMeta,
-        h("div", { class: "pl-actions" }, [play, shuffle, queueAll, this.editBtn]),
+        h("div", { class: "pl-actions" }, [play, shuffle, queueAll, this.copyBtn, this.editBtn]),
       ]),
     ]);
     this.detail = h("div", { class: "playlist-detail" }, [this.hero, this.panel.el]);
@@ -143,19 +157,19 @@ export class PlaylistsView {
       });
     });
     this.grid.replaceChildren(
-      ...(s.account && !s.search ? [newCard] : []),
+      ...(!s.search ? [newCard] : []),
       ...list.map((p, i) => {
         const card = h("button", { class: "playlist-card", attrs: { type: "button", role: "listitem", title: `Open ${p.title}` } }, [
           playlistArt(p),
           h("span", { class: "playlist-name", text: p.title }),
-          h("span", { class: "playlist-meta", text: `${p.owner} · ${plural(p.trackCount, "track")}` }),
+          h("span", { class: "playlist-meta", text: `${isLocalPlaylist(p) ? "Sound2K" : p.owner} · ${plural(p.trackCount, "track")}` }),
         ]);
         card.style.setProperty("--i", String(Math.min(i, 18)));
         card.addEventListener("click", () => this.open(p));
         return card;
       }),
     );
-    const empty = list.length === 0 && (!s.account || s.search !== "");
+    const empty = list.length === 0 && s.search !== "";
     this.overviewEmpty.hidden = !empty;
     this.grid.hidden = empty;
     if (empty) {
@@ -187,6 +201,8 @@ export class PlaylistsView {
       this.detailArt.replaceChildren(playlistArt(open.summary));
       this.detailTitle.textContent = open.summary.title;
       this.editBtn.hidden = !canEdit(this.store, open.summary);
+      this.copyBtn.hidden = isLocalPlaylist(open.summary);
+      this.kind.textContent = isLocalPlaylist(open.summary) ? "Sound2K playlist" : "Playlist";
       this.detailTitle.title = open.summary.title;
       const bg = artUrl(open.summary.artworkUrl, "t67x67");
       this.heroBg.style.backgroundImage = bg ? cssUrl(bg) : placeholderGradient(open.summary.id);

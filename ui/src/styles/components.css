@@ -4395,3 +4395,43 @@ button.home-card {
 .artist-sort.is-active {
   color: var(--tangerine);
 }
+
+/* ===== Liked Songs: All / Sound2K / SoundCloud ===== */
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border-radius: 99px;
+  border: 1px solid var(--btn-border);
+  background: rgba(0, 0, 0, 0.18);
+}
+.segment {
+  padding: 4px 12px;
+  border: 0;
+  border-radius: 99px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.segment[data-count]:not([data-count=""])::after {
+  content: attr(data-count);
+  margin-left: 6px;
+  font-weight: 500;
+  opacity: 0.6;
+  font-variant-numeric: tabular-nums;
+}
+.segment:hover {
+  color: var(--text);
+}
+.segment.is-selected {
+  color: #fff;
+  background: linear-gradient(180deg, var(--accent-light), var(--accent));
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.liked-sources {
+  margin-left: 10px;
+}
