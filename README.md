@@ -42,7 +42,7 @@
 
 **🔎 All of SoundCloud**
 - **Search** every track, artist and playlist on SoundCloud
-- **Home feed:** new uploads and reposts from artists you follow
+- **Home:** a start page with *Jump back in*, new tracks from artists you follow, *Because you played…*, your playlists and *Rediscover your likes*
 - **Artist pages** with popular tracks, uploads, reposts and playlists, plus **Follow**
 
 **🛠 Your library**
