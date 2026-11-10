@@ -211,7 +211,18 @@ impl SoundCloud {
                     return Err(AppError::Api(if bot {
                         "SoundCloud's bot protection blocked this (403, DataDome).".into()
                     } else {
-                        "SoundCloud refused this request (403, not bot protection).".into()
+                        // SoundCloud's own short reason, if it gave one (no
+                        // credentials are ever in a response body).
+                        let reason: String = body
+                            .chars()
+                            .filter(|c| !c.is_control())
+                            .take(160)
+                            .collect();
+                        if reason.trim().is_empty() {
+                            "SoundCloud refused this request (403, no reason given).".into()
+                        } else {
+                            format!("SoundCloud refused this request (403): {reason}")
+                        }
                     }));
                 }
                 StatusCode::NOT_FOUND => return Err(AppError::NotFound("SoundCloud item".into())),
