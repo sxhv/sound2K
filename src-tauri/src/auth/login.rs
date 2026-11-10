@@ -14,11 +14,16 @@
 
 use crate::errors::{AppError, AppResult};
 use crate::paths;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::{Duration, Instant};
+use tauri::webview::NewWindowResponse;
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 use url::Url;
 
 pub const LOGIN_LABEL: &str = "login";
+/// Popups opened by the sign-in page (e.g. "Sign in with Google").
+const POPUP_LABEL_PREFIX: &str = "login-popup-";
+static POPUP_COUNTER: AtomicU32 = AtomicU32::new(0);
 const SIGNIN_URL: &str = "https://soundcloud.com/signin";
 const COOKIE_URL: &str = "https://soundcloud.com/";
 const COOKIE_NAME: &str = "oauth_token";
@@ -58,6 +63,22 @@ fn navigation_allowed(url: &Url) -> bool {
     }
 }
 
+/// A popup may open only to an allowed sign-in site (or start blank, as
+/// Google's does, then load one; later loads are checked by
+/// `navigation_allowed` too).
+fn popup_allowed(url: &Url) -> bool {
+    url.as_str() == "about:blank" || navigation_allowed(url)
+}
+
+/// Close any sign-in popups still open.
+fn close_popups(app: &AppHandle) {
+    for (label, window) in app.webview_windows() {
+        if label.starts_with(POPUP_LABEL_PREFIX) {
+            let _ = window.close();
+        }
+    }
+}
+
 pub async fn sign_in_and_capture_token(app: &AppHandle) -> AppResult<String> {
     if let Some(existing) = app.get_webview_window(LOGIN_LABEL) {
         let _ = existing.set_focus();
@@ -75,6 +96,36 @@ pub async fn sign_in_and_capture_token(app: &AppHandle) -> AppResult<String> {
     // Must match the main window: both share one WebView2 profile.
     .additional_browser_args(paths::BROWSER_ARGS)
     .on_navigation(navigation_allowed)
+    // "Sign in with Google / Apple / Facebook" opens a popup with
+    // window.open. Open it in a real window that shares this window's
+    // browser session (so the popup can report back to the page), with the
+    // same address checks.
+    .on_new_window({
+        let app = app.clone();
+        move |url, features| {
+            if !popup_allowed(&url) {
+                return NewWindowResponse::Deny;
+            }
+            let n = POPUP_COUNTER.fetch_add(1, Ordering::Relaxed);
+            let blank = match "about:blank".parse() {
+                Ok(u) => u,
+                Err(_) => return NewWindowResponse::Deny,
+            };
+            match WebviewWindowBuilder::new(
+                &app,
+                format!("{POPUP_LABEL_PREFIX}{n}"),
+                WebviewUrl::External(blank),
+            )
+            .window_features(features)
+            .title(TITLE)
+            .on_navigation(navigation_allowed)
+            .build()
+            {
+                Ok(window) => NewWindowResponse::Create { window },
+                Err(_) => NewWindowResponse::Deny,
+            }
+        }
+    })
     .on_page_load(|window, payload| {
         if let Some(host) = payload.url().host_str() {
             let _ = window.set_title(&format!("{TITLE} — {host}"));
@@ -92,9 +143,11 @@ pub async fn sign_in_and_capture_token(app: &AppHandle) -> AppResult<String> {
         tokio::time::sleep(POLL_EVERY).await;
 
         let Some(window) = app.get_webview_window(LOGIN_LABEL) else {
+            close_popups(app);
             return Err(AppError::Cancelled);
         };
         if started.elapsed() > GIVE_UP_AFTER {
+            close_popups(app);
             let _ = window.close();
             return Err(AppError::Api("Sign-in timed out. Please try again.".into()));
         }
@@ -107,6 +160,7 @@ pub async fn sign_in_and_capture_token(app: &AppHandle) -> AppResult<String> {
             .find(|c| c.name() == COOKIE_NAME && !c.value().is_empty())
         {
             let token = cookie.value().to_string();
+            close_popups(app);
             let _ = window.close();
             return Ok(token);
         }
@@ -119,6 +173,15 @@ mod tests {
 
     fn ok(u: &str) -> bool {
         navigation_allowed(&u.parse().unwrap())
+    }
+
+    #[test]
+    fn popups() {
+        assert!(popup_allowed(&"about:blank".parse().unwrap()));
+        assert!(popup_allowed(
+            &"https://accounts.google.com/gsi/select".parse().unwrap()
+        ));
+        assert!(!popup_allowed(&"https://example.com/".parse().unwrap()));
     }
 
     #[test]
