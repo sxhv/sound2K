@@ -1,6 +1,5 @@
 import { showMenu } from "../components/popover";
 import { toggleLike } from "../library";
-import { toggleRepost } from "../browse";
 import { ROW_HEIGHT, artwork, buildTrackRow, decorateRow, rowState, type RowHandlers } from "../components/trackRow";
 import { VirtualList } from "../components/virtualList";
 import { button, h } from "../lib/dom";
@@ -30,7 +29,6 @@ export class QueueView {
           { label: "Remove from queue", action: () => player.removeFromQueue(i) },
         ]),
       toggleLike: (t) => void toggleLike(store, t),
-      toggleRepost: (t) => void toggleRepost(store, t),
     };
 
     const controls = (i: number): HTMLElement => {
@@ -79,8 +77,7 @@ export class QueueView {
       s.player.current !== prev.player.current ||
       s.player.playing !== prev.player.playing ||
       s.selectedId !== prev.selectedId ||
-      s.likedIds !== prev.likedIds ||
-      s.repostedIds !== prev.repostedIds
+      s.likedIds !== prev.likedIds
     ) {
       this.list.refresh();
     }

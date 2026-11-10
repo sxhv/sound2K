@@ -29,8 +29,6 @@ const IDS_PER_REQUEST: usize = 50;
 const MAX_ATTEMPTS: u32 = 4;
 /// Albums / playlists on an artist page: up to 10 × 50.
 const ARTIST_SETS_MAX_PAGES: usize = 10;
-/// Your reposts we check for the Repost button: up to 5 × 100.
-const REPOSTS_MAX_PAGES: usize = 5;
 
 /// Shared SoundCloud client (one per app, managed by Tauri).
 pub struct SoundCloud {
@@ -332,8 +330,10 @@ impl SoundCloud {
             .collect())
     }
 
-    /// Like (`true`) or unlike (`false`) a track. This is the only request
-    /// that changes anything on the account.
+    /// Like (`true`) or unlike (`false`) a track on SoundCloud.
+    /// Not used: SoundCloud refuses likes sent by apps (403), so likes are
+    /// kept in Sound2K instead (see local_likes.rs).
+    #[allow(dead_code)]
     pub async fn set_like(&self, user_id: u64, track_id: u64, like: bool) -> AppResult<()> {
         let method = if like { Method::PUT } else { Method::DELETE };
         let address = format!("{API_BASE}/users/{user_id}/track_likes/{track_id}");
@@ -667,28 +667,6 @@ impl SoundCloud {
             .iter()
             .map(ApiPlaylist::summary)
             .filter(|p| wanted(p.set_type.as_deref()))
-            .collect())
-    }
-
-    /// Repost (`true`) or remove your repost of (`false`) a track.
-    pub async fn set_repost(&self, track_id: u64, repost: bool) -> AppResult<()> {
-        let method = if repost { Method::PUT } else { Method::DELETE };
-        let address = format!("{API_BASE}/me/track_reposts/{track_id}");
-        match self.request(method, &address).await {
-            Ok(_) => Ok(()),
-            Err(AppError::NotFound(_)) if !repost => Ok(()),
-            Err(e) => Err(e),
-        }
-    }
-
-    /// Ids of tracks you've reposted (your most recent reposts).
-    pub async fn reposted_ids(&self, user_id: u64) -> AppResult<Vec<String>> {
-        let first =
-            format!("{API_BASE}/stream/users/{user_id}/reposts?limit=100&linked_partitioning=1");
-        let items: Vec<ApiStreamItem> = self.collect_pages_max(first, REPOSTS_MAX_PAGES).await?;
-        Ok(items
-            .into_iter()
-            .filter_map(|i| i.into_feed_item().map(|f| f.track.id))
             .collect())
     }
 

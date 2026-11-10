@@ -2,7 +2,7 @@
 // pages and following. All requests go through Rust (see commands.rs).
 import { api, errorMessage } from "./api";
 import { toast } from "./components/toast";
-import { artistUrl } from "./library";
+import { artistUrl, openOnSoundCloud } from "./library";
 import type { ArtistSection, AppStore, SearchKind } from "./state";
 import type { PlaylistSummary, Track } from "./types";
 
@@ -194,33 +194,12 @@ export { formatCount } from "./lib/format";
 
 /** You can't repost your own tracks (SoundCloud doesn't allow it). */
 export function canRepost(s: { account: { id: number } | null }, t: Track): boolean {
-  return s.account !== null && t.id.startsWith("sc:") && t.artistId !== s.account.id;
+  return s.account !== null && t.id.startsWith("sc:") && t.artistId !== s.account.id && Boolean(t.permalinkUrl);
 }
 
-/** Repost a track to your profile, or remove your repost. */
-export async function toggleRepost(store: AppStore, t: Track): Promise<void> {
-  const s = store.get();
-  if (!s.account) {
-    toast("Sign in to SoundCloud to repost tracks.");
-    return;
-  }
-  if (!canRepost(s, t)) {
-    toast("You can't repost your own tracks.");
-    return;
-  }
-  const was = s.repostedIds.has(t.id);
-  const set = (on: boolean): void => {
-    const next = new Set(store.get().repostedIds);
-    if (on) next.add(t.id);
-    else next.delete(t.id);
-    store.set({ repostedIds: next });
-  };
-  set(!was);
-  try {
-    await api.repostTrack(t.id, !was);
-    toast(was ? "Repost removed" : `Reposted “${t.title}”`);
-  } catch (e) {
-    set(was);
-    toast(`Couldn't ${was ? "remove the repost" : "repost"}: ${errorMessage(e)}`, "error");
-  }
+/** SoundCloud doesn't accept reposts from apps, so open the track on
+ * soundcloud.com where you can repost it yourself. */
+export function repostOnSoundCloud(t: Track): void {
+  openOnSoundCloud(t.permalinkUrl);
+  toast("Opened on SoundCloud: click Repost there.");
 }

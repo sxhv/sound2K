@@ -10,6 +10,7 @@ use crate::errors::{AppError, AppResult};
 use crate::history;
 use crate::library::mock;
 use crate::library::models::{Account, Artist, FeedItem, Paged, PlaylistSummary, Track};
+use crate::local_likes;
 use crate::player::buffer::SharedBuffer;
 use crate::player::decode::StreamDecoder;
 use crate::player::dsp::DspSettings;
@@ -214,29 +215,6 @@ pub async fn get_artist_playlists(
         .await
 }
 
-/// Repost a track to your profile, or remove your repost.
-#[tauri::command]
-pub async fn repost_track(
-    sc: State<'_, SoundCloud>,
-    track_id: String,
-    repost: bool,
-) -> AppResult<()> {
-    if !sc.has_token() {
-        return Err(AppError::Auth("Sign in to repost tracks.".into()));
-    }
-    sc.set_repost(numeric_track_id(&track_id)?, repost).await
-}
-
-/// Ids of tracks you've recently reposted (to show the Repost button's state).
-#[tauri::command]
-pub async fn get_reposted_ids(app: AppHandle, sc: State<'_, SoundCloud>) -> AppResult<Vec<String>> {
-    if !sc.has_token() {
-        return Ok(Vec::new());
-    }
-    let user_id = account_id(&app, &sc).await?;
-    sc.reposted_ids(user_id).await
-}
-
 #[tauri::command]
 pub async fn get_feed(
     sc: State<'_, SoundCloud>,
@@ -439,17 +417,19 @@ pub async fn get_liked_tracks(
     refresh: bool,
 ) -> AppResult<Vec<Track>> {
     if !sc.has_token() {
-        return Ok(mock::library().liked.clone());
-    }
-    if !refresh {
-        if let Some(cached) = cache::read::<Vec<Track>>(&app, CacheFile::Likes) {
-            return Ok(cached);
-        }
+        let local = local_likes::load(&app, 0);
+        return Ok(local_likes::apply(mock::library().liked.clone(), &local));
     }
     let user_id = account_id(&app, &sc).await?;
+    let local = local_likes::load(&app, user_id);
+    if !refresh {
+        if let Some(cached) = cache::read::<Vec<Track>>(&app, CacheFile::Likes) {
+            return Ok(local_likes::apply(cached, &local));
+        }
+    }
     let tracks = sc.liked_tracks(user_id).await?;
     cache::write(&app, CacheFile::Likes, &tracks)?;
-    Ok(tracks)
+    Ok(local_likes::apply(tracks, &local))
 }
 
 #[tauri::command]
@@ -742,30 +722,19 @@ pub async fn like_track(
     track: Track,
     like: bool,
 ) -> AppResult<()> {
-    if !sc.has_token() {
-        return Err(AppError::Auth("Sign in to like tracks.".into()));
-    }
-    let user_id = account_id(&app, &sc).await?;
-    sc.set_like(user_id, numeric_track_id(&track.id)?, like)
-        .await?;
-
-    let mut likes = cache::read::<Vec<Track>>(&app, CacheFile::Likes).unwrap_or_default();
-    likes.retain(|t| t.id != track.id);
-    if like {
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_millis() as i64)
-            .ok();
-        likes.insert(
-            0,
-            Track {
-                liked_at_ms: now,
-                ..track
-            },
-        );
-    }
-    cache::write(&app, CacheFile::Likes, &likes)?;
-    Ok(())
+    // Saved in Sound2K only: SoundCloud refuses likes sent by apps.
+    let account = if sc.has_token() {
+        account_id(&app, &sc).await?
+    } else {
+        0
+    };
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as i64)
+        .ok();
+    let mut local = local_likes::load(&app, account);
+    local_likes::set(&mut local, track, like, now);
+    local_likes::save(&app, account, &local)
 }
 
 /// Similar tracks for autoplay (empty for the sample library).

@@ -94,8 +94,6 @@ export interface AppState {
 
   liked: Track[];
   likedIds: ReadonlySet<string>;
-  /** Tracks you've reposted (your recent reposts plus ones you repost here). */
-  repostedIds: ReadonlySet<string>;
   playlists: PlaylistSummary[];
   openPlaylist: OpenPlaylist | null;
 
@@ -186,7 +184,6 @@ export function createInitialState(settings: Settings): AppState {
     signingIn: false,
     liked: [],
     likedIds: new Set(),
-    repostedIds: new Set(),
     playlists: [],
     openPlaylist: null,
     queue: [],

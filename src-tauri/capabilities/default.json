@@ -62,8 +62,6 @@
     "allow-get-feed",
     "allow-follow-artist",
     "allow-get-followings",
-    "allow-repost-track",
-    "allow-get-reposted-ids",
     "allow-check-for-update",
     "allow-open-update-page",
     "allow-install-update"

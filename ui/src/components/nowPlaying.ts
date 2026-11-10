@@ -8,7 +8,7 @@ import type { Player } from "../player/player";
 import type { AppState, AppStore } from "../state";
 import { downloadTrack, openOnSoundCloud, toggleLike } from "../library";
 import { ArtBackdrop } from "./artBackdrop";
-import { canRepost, openArtistOf, toggleRepost } from "../browse";
+import { openArtistOf } from "../browse";
 import { showAddToPlaylist } from "../playlistEdit";
 import { artwork, swapArt } from "./trackRow";
 
@@ -24,7 +24,6 @@ export class NowPlaying {
   private readonly title: HTMLElement;
   private readonly artist: HTMLElement;
   private readonly likeBtn: HTMLButtonElement;
-  private readonly repostBtn: HTMLButtonElement;
   private readonly playBtn: HTMLButtonElement;
   private readonly shuffleBtn: HTMLButtonElement;
   private readonly repeatBtn: HTMLButtonElement;
@@ -63,15 +62,6 @@ export class NowPlaying {
       },
     });
 
-    this.repostBtn = button({
-      label: "Repost",
-      icon: "repost",
-      class: "icon-btn np-like np-repost",
-      onClick: () => {
-        const t = store.get().player.current;
-        if (t) void toggleRepost(store, t);
-      },
-    });
 
     this.seek = h("input", { class: "range seek np-seek", attrs: { type: "range", min: "0", max: "1", step: "1000", value: "0", "aria-label": "Seek" } });
     this.seek.addEventListener("input", () => {
@@ -119,7 +109,6 @@ export class NowPlaying {
 
     const info = h("div", { class: "np-info" }, [
       h("div", { class: "np-titles" }, [this.title, this.artist]),
-      this.repostBtn,
       this.likeBtn,
     ]);
     const controls = h("div", { class: "np-controls" }, [
@@ -171,15 +160,6 @@ export class NowPlaying {
     }
     if (!pp || t !== pp.current || p.loading !== pp.loading) {
       this.artist.textContent = p.loading ? "Loading…" : t?.artist ?? "Pick a track to start";
-    }
-    if (!pp || t !== pp.current || s.repostedIds !== prev?.repostedIds || s.account !== prev?.account) {
-      const ok = t !== null && canRepost(s, t);
-      const on = ok && t !== null && s.repostedIds.has(t.id);
-      this.repostBtn.hidden = !ok;
-      this.repostBtn.classList.toggle("is-on", on);
-      this.repostBtn.setAttribute("aria-pressed", String(on));
-      this.repostBtn.setAttribute("aria-label", on ? "Remove repost" : "Repost");
-      this.repostBtn.title = on ? "Remove repost" : "Repost";
     }
     if (!pp || t !== pp.current || s.likedIds !== prev?.likedIds) {
       const liked = t !== null && s.likedIds.has(t.id);

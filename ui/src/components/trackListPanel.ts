@@ -12,7 +12,7 @@ import { icon } from "../lib/icons";
 import { VirtualList } from "./virtualList";
 import { catSvg } from "./mascot";
 import { showAddToPlaylist } from "../playlistEdit";
-import { canRepost, openArtistOf, toggleRepost } from "../browse";
+import { canRepost, openArtistOf, repostOnSoundCloud } from "../browse";
 
 const EMPTY: readonly Track[] = [];
 
@@ -65,7 +65,6 @@ export class TrackListPanel {
           ...(opts.extraMenu?.(t) ?? []),
         ]),
       toggleLike: (t) => void toggleLike(store, t),
-      toggleRepost: (t) => void toggleRepost(store, t),
       artist: (t) => openArtistOf(store, t),
     };
     this.list = new VirtualList<Track>(
@@ -242,7 +241,6 @@ export class TrackListPanel {
         s.player.playing !== prev.player.playing ||
         s.selectedId !== prev.selectedId ||
         s.likedIds !== prev.likedIds ||
-        s.repostedIds !== prev.repostedIds ||
         s.account !== prev.account)
     ) {
       this.list.refresh();
@@ -259,9 +257,7 @@ export function trackMenu(store: AppStore, player: Player, t: Track, play: () =>
     { label: "Play next", action: () => player.playNext(t), disabled: !t.playable },
     { label: "Add to queue", action: () => player.enqueue(t), disabled: !t.playable },
     { label: liked ? "Unlike" : "Like", action: () => void toggleLike(store, t) },
-    ...(canRepost(store.get(), t)
-      ? [{ label: store.get().repostedIds.has(t.id) ? "Remove repost" : "Repost", action: () => void toggleRepost(store, t) }]
-      : []),
+    ...(canRepost(store.get(), t) ? [{ label: "Repost on SoundCloud…", action: () => repostOnSoundCloud(t) }] : []),
     ...(anchor && t.id.startsWith("sc:") ? [{ label: "Add to playlist…", action: () => showAddToPlaylist(store, anchor, t) }] : []),
     ...(t.downloadable ? [{ label: "Download", action: () => downloadTrack(store, t) }] : []),
     { label: "Open on SoundCloud", action: () => openOnSoundCloud(t.permalinkUrl), disabled: !t.permalinkUrl },

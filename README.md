@@ -49,7 +49,8 @@
 - **Search** every track, artist and playlist on SoundCloud
 - **Home:** a start page with a *Continue listening* banner (with Up next), *Jump back in*, *Quick picks*, *Mixes for you* (stations built from your most-liked artists), new tracks from artists you follow, *Because you played…*, *Artists you follow*, *Recently liked* and your playlists. Cards resize to fill wide windows
 - **Artist pages** with Popular, Recent, Albums, EPs & Singles, Playlists and Reposts, plus search and sorting (most played, title, length) and **Follow**
-- **Play counts** on every song, and **Repost** right from the app
+- **Play counts** on every song
+- **Likes saved in Sound2K:** SoundCloud doesn't accept likes from apps, so liking/unliking in Sound2K is stored on your PC (your SoundCloud likes still show, plus anything you like here). *Repost on SoundCloud…* opens the track on soundcloud.com
 
 **🛠 Your library**
 - **Like / unlike**, **create, rename and delete playlists**, add songs with a cover picker, and **drag to reorder**
