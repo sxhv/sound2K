@@ -73,6 +73,7 @@ export class ArtistPage {
       emptyText: (s) =>
         s.artist?.loading ? "Loading…" : s.artist?.error ? `Couldn't load: ${s.artist.error}` : "Nothing here yet.",
       filtersEnabled: false,
+      sourceKey: (s) => `${s.artist?.id ?? s.artist?.profileUrl}|${s.artist?.section}`,
       onNearEnd: () => {
         const a = store.get().artist;
         if (a && a.section !== "playlists") void loadArtistSection(store, a.section, true);

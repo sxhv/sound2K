@@ -1,9 +1,11 @@
 import { openPlaylist } from "../browse";
+import { playlistArt } from "../components/playlistArt";
+export { playlistArt };
 import { TrackListPanel } from "../components/trackListPanel";
 import { button, h } from "../lib/dom";
 import { icon } from "../lib/icons";
 import { showMenu } from "../components/popover";
-import { canEdit, createPlaylist, deletePlaylist, moveInPlaylist, removeFromPlaylist, renamePlaylist } from "../playlistEdit";
+import { canEdit, createPlaylist, deletePlaylist, moveInPlaylist, moveTrackTo, removeFromPlaylist, renamePlaylist } from "../playlistEdit";
 import { searchPlaylists } from "../lib/filterSort";
 import { artUrl, cssUrl } from "../lib/artwork";
 import { formatTotal, placeholderGradient, plural } from "../lib/format";
@@ -11,19 +13,6 @@ import type { Player } from "../player/player";
 import type { AppState, AppStore } from "../state";
 import type { PlaylistSummary } from "../types";
 
-export function playlistArt(p: PlaylistSummary): HTMLElement {
-  const art = h("div", { class: "art art-playlist", attrs: { "aria-hidden": "true" } });
-  art.style.background = placeholderGradient(p.id);
-  const src = artUrl(p.artworkUrl, "t300x300");
-  if (src) {
-    const img = h("img", { attrs: { src, alt: "", loading: "lazy", decoding: "async" } });
-    img.addEventListener("error", () => img.remove());
-    if (img.complete) img.classList.add("is-loaded");
-    else img.addEventListener("load", () => img.classList.add("is-loaded"), { once: true });
-    art.append(img);
-  }
-  return art;
-}
 
 export class PlaylistsView {
   readonly el: HTMLElement;
@@ -56,6 +45,15 @@ export class PlaylistsView {
       source: (s) => s.openPlaylist?.tracks ?? null,
       emptyText: (s) => (s.openPlaylist?.loading ? "Loading playlist…" : "This playlist is empty."),
       filtersEnabled: true,
+      sourceKey: (s) => s.openPlaylist?.summary.id ?? "",
+      // Your own playlists: drag the grip to reorder.
+      reorder: {
+        enabled: (s) => s.openPlaylist !== null && !s.openPlaylist.loading && canEdit(store, s.openPlaylist.summary),
+        move: (t, to) => {
+          const open = store.get().openPlaylist;
+          if (open) void moveTrackTo(store, open.summary, t, to);
+        },
+      },
       // Your own playlists: remove / reorder from the ⋯ menu.
       extraMenu: (t) => {
         const open = store.get().openPlaylist;

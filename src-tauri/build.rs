@@ -38,6 +38,7 @@ const COMMANDS: &[&str] = &[
     "rename_playlist",
     "edit_playlist_track",
     "delete_playlist",
+    "move_playlist_track",
     "download_track",
     "discord_presence",
     "discord_available",

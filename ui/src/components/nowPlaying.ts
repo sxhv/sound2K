@@ -9,6 +9,7 @@ import type { AppState, AppStore } from "../state";
 import { downloadTrack, openOnSoundCloud, toggleLike } from "../library";
 import { ArtBackdrop } from "./artBackdrop";
 import { openArtistOf } from "../browse";
+import { showAddToPlaylist } from "../playlistEdit";
 import { artwork, swapArt } from "./trackRow";
 
 function setFill(range: HTMLInputElement): void {
@@ -33,6 +34,7 @@ export class NowPlaying {
   private readonly volume: HTMLInputElement;
   private readonly queueBtn: HTMLButtonElement;
   private readonly downloadBtn: HTMLButtonElement;
+  private readonly addBtn: HTMLButtonElement;
   private dragging = false;
 
   constructor(store: AppStore, player: Player) {
@@ -92,6 +94,16 @@ export class NowPlaying {
         if (t) downloadTrack(store, t);
       },
     });
+    const addBtn = button({
+      label: "Add to playlist",
+      icon: "plus",
+      class: "icon-btn",
+      onClick: () => {
+        const t = store.get().player.current;
+        if (t) showAddToPlaylist(store, addBtn, t);
+      },
+    });
+    this.addBtn = addBtn;
     this.queueBtn = button({ label: "Up next", icon: "queue", class: "icon-btn toggle", onClick: () => store.set({ queueOpen: !store.get().queueOpen }) });
 
     const info = h("div", { class: "np-info" }, [
@@ -115,7 +127,7 @@ export class NowPlaying {
           info,
           h("div", { class: "np-seek-row" }, [this.seek, h("div", { class: "np-times" }, [this.elapsed, this.remaining])]),
           controls,
-          h("div", { class: "np-volume-row" }, [this.muteBtn, this.volume, this.downloadBtn, this.queueBtn]),
+          h("div", { class: "np-volume-row" }, [this.muteBtn, this.volume, this.addBtn, this.downloadBtn, this.queueBtn]),
         ]),
       ]),
     ]);
@@ -141,6 +153,7 @@ export class NowPlaying {
       this.title.classList.toggle("is-link", Boolean(t?.permalinkUrl));
       this.title.title = t?.permalinkUrl ? "Open on SoundCloud" : "";
       this.downloadBtn.hidden = !t?.downloadable;
+      this.addBtn.hidden = !t?.id.startsWith("sc:");
       this.seek.max = String(t ? t.durationMs : 1);
       this.seek.disabled = !t;
     }

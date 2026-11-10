@@ -2,7 +2,11 @@
 // SoundCloud first; the app's lists update when SoundCloud confirms.
 import { api, errorMessage } from "./api";
 import { confirmDialog, promptDialog } from "./components/dialog";
-import { showMenu, type MenuItem } from "./components/popover";
+import { closePopover, openPopover } from "./components/popover";
+import { h } from "./lib/dom";
+import { plural } from "./lib/format";
+import { icon } from "./lib/icons";
+import { playlistArt } from "./components/playlistArt";
 import { toast } from "./components/toast";
 import type { AppStore } from "./state";
 import type { PlaylistSummary, Track } from "./types";
@@ -122,13 +126,68 @@ export async function moveInPlaylist(store: AppStore, p: PlaylistSummary, t: Tra
   }
 }
 
-/** "Add to playlist" picker (opened from a track's ⋯ menu). */
+/** Drag-and-drop: move `t` so it ends up at position `toIndex`. */
+export async function moveTrackTo(store: AppStore, p: PlaylistSummary, t: Track, toIndex: number): Promise<void> {
+  const open = store.get().openPlaylist;
+  if (!open || open.summary.id !== p.id) return;
+  const before = open.tracks;
+  const rest = before.filter((x) => x.id !== t.id);
+  const at = Math.max(0, Math.min(toIndex, rest.length));
+  const moved = [...rest.slice(0, at), t, ...rest.slice(at)];
+  if (moved.every((x, i) => x.id === before[i]?.id)) return;
+  store.set({ openPlaylist: { ...open, tracks: moved } });
+  try {
+    applySummary(store, await api.movePlaylistTrack(p.id, t.id, rest[at]?.id ?? null));
+  } catch (err) {
+    const now = store.get().openPlaylist;
+    if (now?.summary.id === p.id) store.set({ openPlaylist: { ...now, tracks: before } });
+    toast(`Couldn't move: ${errorMessage(err)}`, "error");
+  }
+}
+
+/** "Add to playlist" picker: your playlists with their covers. */
 export function showAddToPlaylist(store: AppStore, anchor: HTMLElement, t: Track): void {
   if (!needAccount(store)) return;
-  const items: MenuItem[] = [
-    { label: "＋ New playlist…", action: () => void createPlaylist(store, [t]) },
-    ...ownPlaylists(store).map((p) => ({ label: p.title, action: () => void addToPlaylist(store, p, t) })),
-  ];
-  // Let the first menu finish closing before opening this one.
-  window.setTimeout(() => showMenu(anchor, items), 0);
+  const mine = ownPlaylists(store);
+
+  const list = h("div", { class: "pl-picker-list", attrs: { role: "listbox", "aria-label": "Your playlists" } });
+  const row = (art: HTMLElement, title: string, sub: string, onPick: () => void, extra = ""): HTMLButtonElement => {
+    const b = h("button", { class: `pl-picker-row ${extra}`.trim(), attrs: { type: "button", role: "option" } }, [
+      art,
+      h("span", { class: "pl-picker-text" }, [h("span", { class: "pl-picker-title", text: title }), h("span", { class: "pl-picker-sub", text: sub })]),
+    ]);
+    b.addEventListener("click", onPick);
+    return b;
+  };
+  const newArt = h("div", { class: "art pl-picker-art new-playlist-art", attrs: { "aria-hidden": "true" } }, [icon("plus")]);
+  const newRow = row(newArt, "New playlist", "Create one with this song", () => {
+    closePopover();
+    void createPlaylist(store, [t]);
+  }, "is-new");
+
+  const render = (filter: string): void => {
+    const f = filter.trim().toLowerCase();
+    const shown = mine.filter((p) => !f || p.title.toLowerCase().includes(f));
+    list.replaceChildren(
+      newRow,
+      ...shown.map((p) =>
+        row(playlistArt(p), p.title, plural(p.trackCount, "track"), () => {
+          closePopover();
+          void addToPlaylist(store, p, t);
+        }),
+      ),
+      ...(shown.length === 0 && mine.length > 0 ? [h("p", { class: "pl-picker-empty", text: "No playlists match." })] : []),
+    );
+  };
+  render("");
+
+  const parts: HTMLElement[] = [h("div", { class: "pl-picker-head" }, [h("h3", { text: "Add to playlist" }), h("span", { class: "pl-picker-song", text: t.title })])];
+  if (mine.length > 6) {
+    const filter = h("input", { class: "glass-field pl-picker-filter", attrs: { type: "search", placeholder: "Find a playlist", "aria-label": "Find a playlist" } });
+    filter.addEventListener("input", () => render(filter.value));
+    parts.push(filter);
+  }
+  parts.push(list);
+  // Let the ⋯ menu finish closing first.
+  window.setTimeout(() => openPopover(anchor, h("div", { class: "pl-picker" }, parts), { align: "end", className: "popover-picker" }), 0);
 }

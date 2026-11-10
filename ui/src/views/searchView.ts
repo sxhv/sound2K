@@ -72,6 +72,7 @@ export class SearchView {
         s.scSearch.loading ? "Searching…" : s.scSearch.error ? `Search failed: ${s.scSearch.error}` : "No tracks found.",
       filtersEnabled: false,
       onNearEnd: () => void moreSearch(store),
+      sourceKey: (s) => `${s.scSearch.q}|${s.scSearch.kind}`,
     });
     this.grid = h("div", { class: "playlist-grid search-grid", attrs: { role: "list" } });
     this.grid.addEventListener("scroll", () => {

@@ -36,6 +36,7 @@ const PATHS = {
   wave: `<path ${S} d="M3 12h2l2-5 3 11 3-14 3 12 2-4h3"/>`,
   locate: `<circle ${S} cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2.2"/><path ${S} d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/>`,
   plus: `<path ${S} d="M12 5v14M5 12h14"/>`,
+  grip: '<circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/>',
   edit: `<path ${S} d="M5 19h4L19 9l-4-4L5 15v4zM13 7l4 4"/>`,
   trash: `<path ${S} d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/>`,
   download: `<path ${S} d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14"/>`,

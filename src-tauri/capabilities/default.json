@@ -48,6 +48,7 @@
     "allow-rename-playlist",
     "allow-edit-playlist-track",
     "allow-delete-playlist",
+    "allow-move-playlist-track",
     "allow-download-track",
     "allow-discord-presence",
     "allow-discord-available",

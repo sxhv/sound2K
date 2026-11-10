@@ -87,6 +87,7 @@ pub fn run() {
             commands::rename_playlist,
             commands::edit_playlist_track,
             commands::delete_playlist,
+            commands::move_playlist_track,
             commands::download_track,
             commands::discord_presence,
             commands::discord_available,

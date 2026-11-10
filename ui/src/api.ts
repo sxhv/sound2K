@@ -24,6 +24,8 @@ export const api = {
   editPlaylistTrack: (playlistId: string, trackId: string, action: "add" | "remove" | "up" | "down") =>
     invoke<PlaylistSummary>("edit_playlist_track", { playlistId, trackId, action }),
   deletePlaylist: (playlistId: string) => invoke<void>("delete_playlist", { playlistId }),
+  movePlaylistTrack: (playlistId: string, trackId: string, beforeId: string | null) =>
+    invoke<PlaylistSummary>("move_playlist_track", { playlistId, trackId, beforeId }),
   discordPresence: (presence: DiscordPresence | null) => invoke<void>("discord_presence", { presence }),
   discordAvailable: () => invoke<boolean>("discord_available"),
   discordStatusText: () => invoke<string>("discord_status_text"),

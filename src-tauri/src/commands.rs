@@ -332,6 +332,29 @@ pub async fn edit_playlist_track(
     Ok(summary)
 }
 
+/// Drag-and-drop reorder: move `track_id` to just before `before_id`
+/// (or to the end when `before_id` is null).
+#[tauri::command]
+pub async fn move_playlist_track(
+    app: AppHandle,
+    sc: State<'_, SoundCloud>,
+    playlist_id: String,
+    track_id: String,
+    before_id: Option<String>,
+) -> AppResult<PlaylistSummary> {
+    require_sign_in(&sc)?;
+    let before = before_id.as_deref().map(numeric_track_id).transpose()?;
+    let summary = sc
+        .move_in_playlist_before(
+            numeric_playlist_id(&playlist_id)?,
+            numeric_track_id(&track_id)?,
+            before,
+        )
+        .await?;
+    cache_playlist(&app, Some(&summary), None);
+    Ok(summary)
+}
+
 #[tauri::command]
 pub async fn delete_playlist(
     app: AppHandle,

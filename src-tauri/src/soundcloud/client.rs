@@ -412,6 +412,26 @@ impl SoundCloud {
         self.update_playlist(playlist_id, None, Some(&ids)).await
     }
 
+    /// Move a track to just before `before` (or to the end when `None`).
+    /// Tracks hidden in the app (private/deleted) keep their places.
+    pub async fn move_in_playlist_before(
+        &self,
+        playlist_id: u64,
+        track_id: u64,
+        before: Option<u64>,
+    ) -> AppResult<PlaylistSummary> {
+        let mut ids = self.playlist_track_ids(playlist_id).await?;
+        let Some(from) = ids.iter().position(|id| *id == track_id) else {
+            return Err(AppError::NotFound("track in playlist".into()));
+        };
+        ids.remove(from);
+        let to = before
+            .and_then(|b| ids.iter().position(|id| *id == b))
+            .unwrap_or(ids.len());
+        ids.insert(to, track_id);
+        self.update_playlist(playlist_id, None, Some(&ids)).await
+    }
+
     pub async fn delete_playlist(&self, playlist_id: u64) -> AppResult<()> {
         self.request(
             Method::DELETE,

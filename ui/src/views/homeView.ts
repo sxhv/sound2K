@@ -28,6 +28,7 @@ export class HomeView {
               : "Nothing new yet. Follow some artists!",
       filtersEnabled: false,
       onNearEnd: () => void loadFeed(store, true),
+      sourceKey: () => "feed",
     });
     const play = button({
       label: "Play feed",

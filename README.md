@@ -46,7 +46,7 @@
 - **Artist pages** with popular tracks, uploads, reposts and playlists, plus **Follow**
 
 **🛠 Your library**
-- **Like / unlike**, **create, rename and delete playlists**, add, remove and reorder tracks
+- **Like / unlike**, **create, rename and delete playlists**, add songs with a cover picker, and **drag to reorder**
 - **Jump to the playing song** in any list (Ctrl+J)
 - **Discord status:** "Listening to …" with cover art and a *Listen on SoundCloud* button (opt-in)
 - **Download** tracks whose artist allows it, via SoundCloud's official download

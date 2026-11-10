@@ -3330,3 +3330,192 @@ html.no-mascot .mascot {
 .artist-sections {
   flex: none;
 }
+
+/* ==========================================================================
+   Add-to-playlist picker
+   ========================================================================== */
+
+.popover-picker {
+  width: 320px;
+  padding: 10px;
+}
+
+.pl-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pl-picker-head h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.pl-picker-song {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pl-picker-filter {
+  width: 100%;
+  padding: 7px 10px;
+}
+
+.pl-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: min(360px, 55vh);
+  overflow-y: auto;
+  margin: 0 -4px;
+  padding: 0 4px;
+}
+
+.pl-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.35s var(--spring);
+}
+
+.pl-picker-row:hover,
+.pl-picker-row:focus-visible {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.pl-picker-row:active {
+  transform: scale(0.97);
+  transition-duration: 0.07s;
+}
+
+.pl-picker-row .art-playlist,
+.pl-picker-art {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 7px;
+}
+
+.pl-picker-art.new-playlist-art .icon {
+  width: 22px;
+  height: 22px;
+}
+
+.pl-picker-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.pl-picker-title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pl-picker-sub {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.pl-picker-empty {
+  margin: 6px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+/* ==========================================================================
+   Drag to reorder (your playlists)
+   ========================================================================== */
+
+.drag-handle {
+  flex: none;
+  width: 22px;
+  height: 32px;
+  margin-right: -4px;
+  color: var(--muted);
+  cursor: grab;
+  opacity: 0.35;
+  touch-action: none;
+}
+
+.drag-handle .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.track-row:hover .drag-handle {
+  opacity: 1;
+}
+
+.track-panel.is-dragging,
+.track-panel.is-dragging * {
+  cursor: grabbing !important;
+  user-select: none;
+}
+
+.track-row.is-drag-source {
+  opacity: 0.35;
+}
+
+.drop-line {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  height: 3px;
+  z-index: 6;
+  border-radius: 3px;
+  background: var(--orange);
+  box-shadow: 0 0 10px var(--orange);
+  pointer-events: none;
+}
+
+.drop-line::before {
+  content: "";
+  position: absolute;
+  left: -4px;
+  top: -3px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--orange);
+}
+
+.drag-ghost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 320px;
+  padding: 6px 12px 6px 6px;
+  border-radius: 12px;
+  background: var(--panel-solid);
+  border: 1px solid var(--orange);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55);
+  font-weight: 600;
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.drag-ghost .art-row {
+  width: 36px;
+  height: 36px;
+}
