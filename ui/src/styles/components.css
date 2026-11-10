@@ -4309,3 +4309,8 @@ button.home-card {
   max-width: 100%;
   align-self: flex-start;
 }
+
+/* Your profile picture, while your profile is open. */
+.topbar .avatar.is-active {
+  box-shadow: 0 0 0 2px var(--accent), 0 0 12px color-mix(in srgb, var(--accent) 50%, transparent);
+}

@@ -7,6 +7,7 @@ import { api, errorMessage } from "../api";
 import { formatBytes } from "../lib/format";
 import { toast } from "./toast";
 import { checkForUpdate, installUpdate, openUpdate } from "../updates";
+import { openArtist } from "../browse";
 import { closePopover, isPopoverOpenFor, openPopover } from "./popover";
 
 const THEMES: readonly { id: Theme; label: string }[] = [
@@ -24,6 +25,7 @@ export class TopBar {
   readonly el: HTMLElement;
   private readonly pill: HTMLElement;
   private readonly avatar: HTMLElement;
+  private readonly gear: HTMLButtonElement;
   private readonly eqBtn: HTMLButtonElement;
   private readonly soundBtn: HTMLButtonElement;
   /** A Discord app id is built in (see src-tauri/src/discord.rs). */
@@ -45,9 +47,28 @@ export class TopBar {
       wordmark,
       this.pill,
     ]);
-    // Your profile picture opens Settings (account, theme, options).
-    this.avatar = h("button", { class: "avatar", attrs: { type: "button", "aria-haspopup": "dialog" } });
-    this.avatar.addEventListener("click", () => this.toggleSettings());
+    // Your profile picture opens your profile; signed out, it opens Settings
+    // (where you sign in).
+    this.avatar = h("button", { class: "avatar", attrs: { type: "button" } });
+    this.avatar.addEventListener("click", () => {
+      const a = this.store.get().account;
+      if (!a) {
+        this.toggleSettings();
+        return;
+      }
+      const s = this.store.get();
+      if (s.page === "artist" && s.artist?.id === a.id) {
+        this.store.set({ page: "library" });
+        return;
+      }
+      openArtist(this.store, { id: a.id, profileUrl: a.permalinkUrl, name: a.username });
+    });
+    this.gear = h(
+      "button",
+      { class: "glass-btn icon-only", attrs: { type: "button", "aria-label": "Settings", title: "Settings", "aria-haspopup": "dialog", "aria-expanded": "false" } },
+      [icon("gear")],
+    );
+    this.gear.addEventListener("click", () => this.toggleSettings());
     api.discordAvailable().then(
       (yes) => (this.discordAvailable = yes),
       () => undefined,
@@ -70,21 +91,23 @@ export class TopBar {
       this.eqBtn,
       this.soundBtn,
       this.avatar,
+      this.gear,
       windowButtons,
     ]);
   }
 
   private toggleSettings(): void {
-    if (isPopoverOpenFor(this.avatar)) {
+    if (isPopoverOpenFor(this.gear)) {
       closePopover();
       return;
     }
-    openPopover(this.avatar, this.buildSettingsPanel(), { align: "end", className: "popover-wide" });
+    openPopover(this.gear, this.buildSettingsPanel(), { align: "end", className: "popover-wide" });
   }
 
   update(s: AppState, prev: AppState | null): void {
     if (!prev || s.update !== prev.update) {
-      this.avatar.classList.toggle("has-dot", s.update !== null);
+      this.gear.classList.toggle("has-dot", s.update !== null);
+      this.gear.title = s.update ? `Settings · update v${s.update.latest} available` : "Settings";
     }
     if (!prev || s.page !== prev.page || s.eqEnabled !== prev.eqEnabled) {
       this.eqBtn.classList.toggle("is-active", s.page === "equalizer");
@@ -100,11 +123,16 @@ export class TopBar {
       this.pill.classList.toggle("is-busy", s.syncing || s.signingIn);
       this.pill.title = s.account ? "" : "Not signed in: showing built-in sample tracks";
     }
+    if (!prev || s.page !== prev.page || s.artist?.id !== prev.artist?.id || s.account !== prev.account) {
+      const mine = s.page === "artist" && s.account !== null && s.artist?.id === s.account.id;
+      this.avatar.classList.toggle("is-active", mine);
+      this.avatar.setAttribute("aria-pressed", String(mine));
+    }
     if (!prev || s.account !== prev.account) {
       const a = s.account;
       const label = a ? `Signed in as ${a.username}` : "Not signed in";
-      this.avatar.setAttribute("aria-label", `${label}. Open settings`);
-      this.avatar.title = `${label} · Settings`;
+      this.avatar.setAttribute("aria-label", a ? `${label}. Open your profile` : `${label}. Open settings to sign in`);
+      this.avatar.title = a ? `${label} · Your profile` : "Not signed in · Sign in";
       if (a?.avatarUrl) {
         const img = h("img", { attrs: { src: a.avatarUrl, alt: "", decoding: "async" } });
         img.addEventListener("error", () => this.avatar.replaceChildren(icon("user")));

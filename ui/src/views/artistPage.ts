@@ -25,6 +25,7 @@ export class ArtistPage {
   private readonly name: HTMLElement;
   private readonly meta: HTMLElement;
   private readonly followBtn: HTMLButtonElement;
+  private readonly kind = h("span", { class: "pl-kind", text: "Artist" });
   private readonly webBtn: HTMLButtonElement;
   private readonly chips = new Map<ArtistSection, HTMLButtonElement>();
   private readonly panel: TrackListPanel;
@@ -87,7 +88,7 @@ export class ArtistPage {
         back,
         this.avatarSlot,
         h("div", { class: "artist-text" }, [
-          h("span", { class: "pl-kind", text: "Artist" }),
+          this.kind,
           this.name,
           this.meta,
           h("div", { class: "pl-actions" }, [play, shuffle, this.followBtn, this.webBtn]),
@@ -123,8 +124,11 @@ export class ArtistPage {
           this.banner.style.backgroundImage = banner ? cssUrl(banner) : "";
           this.banner.classList.toggle("is-avatar", !info?.bannerUrl);
         }
+        // Your own profile: no Follow button.
+        const mine = info !== null && s.account?.id === info.id;
+        this.kind.textContent = mine ? "Your profile" : "Artist";
         const following = info?.following === true;
-        this.followBtn.hidden = !info;
+        this.followBtn.hidden = !info || mine;
         this.followBtn.textContent = following ? "Following" : "Follow";
         this.followBtn.classList.toggle("accent", !following);
         this.followBtn.setAttribute("aria-pressed", String(following));
