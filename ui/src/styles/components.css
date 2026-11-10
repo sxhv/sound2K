@@ -4290,24 +4290,35 @@ button.home-card {
 .beat-aura[hidden] {
   display: none;
 }
-.beat-aura-flash {
+.beat-aura-rim,
+.beat-aura-bloom {
   position: absolute;
   inset: 0;
   opacity: 0;
   will-change: opacity;
-  box-shadow:
-    inset 0 0 0 2px color-mix(in srgb, var(--accent-light) 85%, transparent),
-    inset 0 0 18px 2px color-mix(in srgb, var(--accent-light) 70%, transparent),
-    inset 0 0 70px 8px color-mix(in srgb, var(--accent) 55%, transparent),
-    inset 0 0 160px 20px color-mix(in srgb, var(--accent) 22%, transparent);
   mix-blend-mode: screen;
 }
-/* The mini-player is small: a tighter glow. */
-.is-mini .beat-aura-flash {
+/* Sharp edge light: snaps on with each hit. */
+.beat-aura-rim {
   box-shadow:
-    inset 0 0 0 2px color-mix(in srgb, var(--accent-light) 85%, transparent),
-    inset 0 0 14px 2px color-mix(in srgb, var(--accent-light) 65%, transparent),
-    inset 0 0 40px 4px color-mix(in srgb, var(--accent) 45%, transparent);
+    inset 0 0 0 2px color-mix(in srgb, var(--accent-light) 90%, transparent),
+    inset 0 0 12px 1px color-mix(in srgb, var(--accent-light) 70%, transparent),
+    inset 0 0 34px 2px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+/* Wide soft glow: breathes with the bass. */
+.beat-aura-bloom {
+  box-shadow:
+    inset 0 0 90px 10px color-mix(in srgb, var(--accent) 50%, transparent),
+    inset 0 0 200px 30px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+/* The mini-player is small: a tighter glow. */
+.is-mini .beat-aura-rim {
+  box-shadow:
+    inset 0 0 0 2px color-mix(in srgb, var(--accent-light) 90%, transparent),
+    inset 0 0 10px 1px color-mix(in srgb, var(--accent-light) 65%, transparent);
+}
+.is-mini .beat-aura-bloom {
+  box-shadow: inset 0 0 40px 4px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 /* Artist links are only clickable on the name itself, not the empty
@@ -4446,4 +4457,25 @@ button.home-card {
 }
 .liked-sources {
   margin-left: 10px;
+}
+
+/* Mini player: shuffle + repeat beside the volume */
+.mini-toggle {
+  flex: none;
+  width: 24px;
+  height: 24px;
+}
+.mini-toggle .icon {
+  width: 13px;
+  height: 13px;
+}
+.mini-volume-row .mini-toggle:first-of-type {
+  margin-left: 4px;
+}
+.mini-toggle.is-on,
+.mini-toggle.is-on:hover:not(:disabled) {
+  color: #fff;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 55%, transparent);
+  filter: none;
 }

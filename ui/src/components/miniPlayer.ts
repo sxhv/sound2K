@@ -19,6 +19,8 @@ export class MiniPlayer {
   private readonly progress: HTMLElement;
   private readonly likeBtn: HTMLButtonElement;
   private readonly muteBtn: HTMLButtonElement;
+  private readonly shuffleBtn: HTMLButtonElement;
+  private readonly repeatBtn: HTMLButtonElement;
   private readonly volume: HTMLInputElement;
   private readonly lockBadge: HTMLElement;
   private readonly backdrop = new ArtBackdrop("mini-backdrop");
@@ -47,6 +49,8 @@ export class MiniPlayer {
       },
     });
     this.muteBtn = button({ label: "Mute", icon: "volume", class: "icon-btn mini-mute", onClick: () => player.toggleMute() });
+    this.shuffleBtn = button({ label: "Shuffle", icon: "shuffle", class: "icon-btn toggle mini-toggle", onClick: () => player.toggleShuffle() });
+    this.repeatBtn = button({ label: "Repeat: off", icon: "repeat", class: "icon-btn toggle mini-toggle", onClick: () => player.cycleRepeat() });
     this.volume = h("input", {
       class: "range volume mini-volume",
       attrs: { type: "range", min: "0", max: "100", step: "1", "aria-label": "Volume" },
@@ -78,7 +82,7 @@ export class MiniPlayer {
       h("div", { class: "mini-main", attrs: drag }, [
         h("div", { class: "mini-meta", attrs: drag }, [this.title, this.artist]),
         h("div", { class: "mini-progress", attrs: { "aria-hidden": "true" } }, [this.progress]),
-        h("div", { class: "mini-volume-row" }, [this.muteBtn, this.volume]),
+        h("div", { class: "mini-volume-row" }, [this.muteBtn, this.volume, this.shuffleBtn, this.repeatBtn]),
       ]),
       h("div", { class: "mini-controls" }, [
         button({ label: "Previous", icon: "prev", class: "glass-btn round mini-round", onClick: () => player.prev() }),
@@ -114,6 +118,19 @@ export class MiniPlayer {
     if (!pp || p.positionMs !== pp.positionMs || p.current !== pp.current) {
       const pct = p.current && p.current.durationMs > 0 ? (p.positionMs / p.current.durationMs) * 100 : 0;
       this.progress.style.width = `${Math.min(100, Math.max(0, pct))}%`;
+    }
+    if (!pp || p.shuffle !== pp.shuffle) {
+      this.shuffleBtn.classList.toggle("is-on", p.shuffle);
+      this.shuffleBtn.setAttribute("aria-pressed", String(p.shuffle));
+      this.shuffleBtn.title = p.shuffle ? "Shuffle: on" : "Shuffle: off";
+    }
+    if (!pp || p.repeat !== pp.repeat) {
+      this.repeatBtn.replaceChildren(icon(p.repeat === "one" ? "repeatOne" : "repeat"));
+      this.repeatBtn.classList.toggle("is-on", p.repeat !== "off");
+      this.repeatBtn.setAttribute("aria-pressed", String(p.repeat !== "off"));
+      const label = p.repeat === "off" ? "Repeat: off" : p.repeat === "all" ? "Repeat: playlist" : "Repeat: this song";
+      this.repeatBtn.setAttribute("aria-label", label);
+      this.repeatBtn.title = label;
     }
     if (!pp || p.current !== pp.current || s.likedIds !== prev?.likedIds) {
       const liked = p.current !== null && s.likedIds.has(p.current.id);
