@@ -241,7 +241,7 @@ impl SoundCloud {
             // Deleted tracks come back without a `track`; skip them.
             tracks.extend(page.collection.into_iter().filter_map(ApiLike::into_track));
             pages += 1;
-            if pages < max_pages {
+            if pages < MAX_PAGES {
                 next = page.next_href;
             }
         }
@@ -815,7 +815,7 @@ impl SoundCloud {
             let page: Page<T> = self.get_json(&address).await?;
             items.extend(page.collection);
             pages += 1;
-            if pages < MAX_PAGES {
+            if pages < max_pages {
                 next = page.next_href;
             }
         }
