@@ -39,6 +39,25 @@ const CAT_SVG = `
       <rect x="201" y="88" width="17" height="40" rx="8.5"/>
       <rect x="184" y="78" width="21" height="58" rx="10.5"/>
     </g>
+    <!-- Theme accessories (shown by themes.css) -->
+    <g class="cat-acc cat-acc-aero">
+      <circle cx="113" cy="88" r="104" fill="rgba(170,225,255,0.16)" stroke="rgba(255,255,255,0.75)" stroke-width="3"/>
+      <path d="M40 52 Q60 12 112 4" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="7" stroke-linecap="round"/>
+      <circle cx="176" cy="30" r="6" fill="rgba(255,255,255,0.7)"/>
+    </g>
+    <g class="cat-acc cat-acc-winamp">
+      <rect x="48" y="92" width="130" height="26" rx="3" fill="#0b0c0d" stroke="${INK}" stroke-width="4"/>
+      <rect x="56" y="98" width="46" height="5" fill="#2fe05a"/>
+      <rect x="124" y="98" width="46" height="5" fill="#2fe05a"/>
+      <rect x="56" y="107" width="22" height="4" fill="#139a33"/>
+      <rect x="124" y="107" width="22" height="4" fill="#139a33"/>
+    </g>
+    <g class="cat-acc cat-acc-midnight">
+      <path d="M58 44 Q110 -6 178 30 Q206 2 222 24" fill="#4b3cd1" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/>
+      <path d="M52 48 Q112 20 182 34" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round"/>
+      <circle cx="222" cy="26" r="11" fill="#fff" stroke="${INK}" stroke-width="3.5"/>
+      <path d="M14 26 a16 16 0 1 0 22 -20 a12 12 0 1 1 -22 20 Z" fill="#ffe9a8" stroke="${INK}" stroke-width="3"/>
+    </g>
   </g>
   <g class="cat-zzz" fill="#fff" font-weight="800" font-family="inherit">
     <text x="186" y="22" font-size="34">z</text>

@@ -4047,7 +4047,7 @@ dependencies = [
 
 [[package]]
 name = "sound2k"
-version = "0.1.13"
+version = "0.1.14"
 dependencies = [
  "bytes",
  "futures-util",
