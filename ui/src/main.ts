@@ -1,4 +1,5 @@
 import "./styles/base.css";
+import { EmbedTransport, routingTransport } from "./player/embedTransport";
 import "./styles/components.css";
 import "./styles/themes.css";
 
@@ -36,6 +37,7 @@ function settingsOf(s: AppState): Settings {
     accentMode: s.accentMode,
     accentColor: s.accentColor,
     glass: s.glass,
+    embedFallback: s.embedFallback,
     discordStatus: s.discordStatus,
     updateCheck: s.updateCheck,
   };
@@ -141,7 +143,7 @@ async function boot(): Promise<void> {
   const store = new Store({ ...createInitialState(settings), recent });
   const player = new Player(store, {
     notify: (msg) => toast(msg),
-    transport: tauriTransport,
+    transport: routingTransport(tauriTransport, new EmbedTransport()),
     related: (track) => api.relatedTracks(track.id),
     standin: (track) => api.findStandin(track),
   });

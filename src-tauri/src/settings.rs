@@ -103,6 +103,9 @@ pub struct Settings {
     pub accent_color: String,
     /// Glass blur strength: 0 (crisp) … 2 (heavy frost); 1 = default.
     pub glass: f32,
+    /// Play protected (DRM-only) songs with SoundCloud's own embedded player
+    /// when there's no unprotected stand-in. Experimental.
+    pub embed_fallback: bool,
 }
 
 impl Default for Settings {
@@ -127,6 +130,7 @@ impl Default for Settings {
             accent_mode: AccentMode::default(),
             accent_color: DEFAULT_ACCENT.into(),
             glass: 1.0,
+            embed_fallback: true,
         }
     }
 }

@@ -16,7 +16,7 @@ const LEGACY_DIR_NAME: &str = "SoundCloudMini";
 /// so the options must be identical. These are Tauri's defaults plus a
 /// 50 MB cap on the browser disk cache (artwork images).
 pub const BROWSER_ARGS: &str =
-    "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --disk-cache-size=52428800";
+    "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --disk-cache-size=52428800 --autoplay-policy=no-user-gesture-required";
 
 /// Root of the app's private data folder.
 pub fn app_data_dir(app: &AppHandle) -> tauri::Result<PathBuf> {

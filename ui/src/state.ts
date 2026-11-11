@@ -141,6 +141,7 @@ export interface AppState {
   accentMode: AccentMode;
   accentColor: string;
   glass: number;
+  embedFallback: boolean;
   discordStatus: boolean;
   updateCheck: boolean;
   /** Set when a newer version was found. */
@@ -194,6 +195,7 @@ export const DEFAULT_SETTINGS: Settings = {
   accentMode: "song",
   accentColor: "#ff7a1a",
   glass: 1,
+  embedFallback: true,
   discordStatus: false,
   updateCheck: true,
 };
@@ -236,6 +238,7 @@ export function createInitialState(settings: Settings): AppState {
     accentMode: settings.accentMode ?? DEFAULT_SETTINGS.accentMode,
     accentColor: settings.accentColor ?? DEFAULT_SETTINGS.accentColor,
     glass: settings.glass ?? DEFAULT_SETTINGS.glass,
+    embedFallback: settings.embedFallback ?? DEFAULT_SETTINGS.embedFallback,
     discordStatus: settings.discordStatus ?? DEFAULT_SETTINGS.discordStatus,
     updateCheck: settings.updateCheck ?? DEFAULT_SETTINGS.updateCheck,
     update: null,

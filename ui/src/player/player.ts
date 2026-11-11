@@ -411,6 +411,12 @@ export class Player {
       this.start(found, opts);
       return;
     }
+    if (this.store.get().embedFallback && /^sc:\d+$/.test(track.id)) {
+      // Experimental: let SoundCloud's own player (inside the app) play it.
+      this.notify(`“${track.title}” is protected; trying SoundCloud's player for it (no EQ or visualizer on this one).`);
+      this.start({ ...track, playable: true, viaEmbed: true }, { ...opts, fadeMs: 0 });
+      return;
+    }
     this.setPlayer({ loading: false });
     this.notify(`“${track.title}” is protected and there's no other version to play. Try ⋯ → Open on SoundCloud.`);
     this.next(true, true);

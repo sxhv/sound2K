@@ -4560,3 +4560,15 @@ button.home-card {
   background: linear-gradient(90deg, #ff3a6e, #ff7a1a);
   font-weight: 700;
 }
+
+/* SoundCloud's embedded player (protected songs): kept out of sight. */
+.sc-embed {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  width: 320px;
+  height: 166px;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}

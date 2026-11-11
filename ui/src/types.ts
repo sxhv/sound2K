@@ -25,6 +25,8 @@ export interface Track {
   plays?: number | null;
   /** Why it can't be played here (when playable is false). */
   unavailable?: string | null;
+  /** Play with SoundCloud's embedded player (protected track, no stand-in). */
+  viaEmbed?: boolean;
 }
 
 export interface PlaylistSummary {
@@ -116,6 +118,8 @@ export interface Settings {
   accentColor: string;
   /** Glass blur strength 0..2 (1 = default). */
   glass: number;
+  /** Protected songs without a stand-in: try SoundCloud's embedded player. */
+  embedFallback: boolean;
   /** Show "Listening to …" on Discord. */
   discordStatus: boolean;
   /** Look for a newer version on GitHub at startup. */
