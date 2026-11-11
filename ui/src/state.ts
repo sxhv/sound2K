@@ -32,6 +32,8 @@ export interface OpenPlaylist {
   loading: boolean;
 }
 
+export type Page = "library" | "equalizer" | "sound" | "artist";
+
 /** Which likes the Liked Songs tab shows. */
 export type LikedSource = "all" | "sound2k" | "soundcloud";
 
@@ -141,7 +143,9 @@ export interface AppState {
   update: UpdateInfo | null;
 
   /** Library (tabs) or one of the top-bar pages. */
-  page: "library" | "equalizer" | "sound" | "artist";
+  page: Page;
+  /** Where to return when the Equalizer / Sound page closes. */
+  pageBack: "library" | "artist";
   artist: ArtistPageState | null;
   scSearch: SearchState;
   feed: FeedState;
@@ -226,6 +230,7 @@ export function createInitialState(settings: Settings): AppState {
     updateCheck: settings.updateCheck ?? DEFAULT_SETTINGS.updateCheck,
     update: null,
     page: "library",
+    pageBack: "library",
     artist: null,
     scSearch: { q: "", kind: "tracks", tracks: [], artists: [], playlists: [], next: null, loading: false, error: null, done: false },
     feed: { items: [], tracks: [], next: null, loading: false, error: null, loaded: false },
@@ -249,4 +254,18 @@ export function createInitialState(settings: Settings): AppState {
 /** The likes the Liked Songs tab is showing. */
 export function likedList(s: Pick<AppState, "likedSource" | "allLiked" | "localLiked" | "liked">): Track[] {
   return s.likedSource === "sound2k" ? s.localLiked : s.likedSource === "soundcloud" ? s.liked : s.allLiked;
+}
+
+/** Open the Equalizer or Sound page, remembering the page you were on;
+ * opening the one already open closes it. */
+export function togglePage(s: AppState, page: "equalizer" | "sound"): Partial<AppState> {
+  if (s.page === page) return closeToolPage(s);
+  const back = s.page === "artist" ? "artist" : s.page === "library" ? "library" : s.pageBack;
+  return { page, pageBack: back, nowPlayingOpen: false };
+}
+
+/** Close the Equalizer / Sound page: back to the artist page or tab you
+ * were on before. */
+export function closeToolPage(s: AppState): Partial<AppState> {
+  return { page: s.pageBack === "artist" && s.artist ? "artist" : "library" };
 }

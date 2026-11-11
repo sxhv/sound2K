@@ -1,7 +1,7 @@
 import { button, h } from "../lib/dom";
 import { windowControls } from "../lib/windowControls";
 import { icon } from "../lib/icons";
-import type { AppState, AppStore } from "../state";
+import { togglePage as togglePageState, type AppState, type AppStore } from "../state";
 import type { Theme } from "../types";
 import { api, errorMessage } from "../api";
 import { formatBytes } from "../lib/format";
@@ -75,8 +75,7 @@ export class TopBar {
     );
     // Pages: Equalizer and Sound (crossfade, levelling). Click again to go back.
     const togglePage = (page: "equalizer" | "sound"): void => {
-      const s = this.store.get();
-      this.store.set({ page: s.page === page ? "library" : page, nowPlayingOpen: false });
+      this.store.set(togglePageState(this.store.get(), page));
     };
     this.eqBtn = button({ label: "Equalizer", icon: "sliders", class: "glass-btn icon-only page-btn", onClick: () => togglePage("equalizer") });
     this.soundBtn = button({ label: "Crossfade & levelling", icon: "wave", class: "glass-btn icon-only page-btn", onClick: () => togglePage("sound") });

@@ -24,7 +24,7 @@ import { windowControls } from "./lib/windowControls";
 import { signIn, signOut, syncLibrary } from "./library";
 import { h } from "./lib/dom";
 import type { Player } from "./player/player";
-import type { AppState, AppStore } from "./state";
+import { closeToolPage, type AppState, type AppStore } from "./state";
 import type { TabId } from "./types";
 import { LikedView } from "./views/likedView";
 import { PlaylistsView } from "./views/playlistsView";
@@ -102,6 +102,7 @@ export function mountApp(root: HTMLElement, store: AppStore, player: Player, ver
     const s = store.get();
     if (s.queueOpen) store.set({ queueOpen: false });
     else if (s.nowPlayingOpen) store.set({ nowPlayingOpen: false });
+    else if (s.page === "equalizer" || s.page === "sound") store.set(closeToolPage(s));
   });
 
   // Accent colours (buttons, glows, sliders, visualizer) follow the current
