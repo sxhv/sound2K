@@ -77,7 +77,12 @@ export function buildTrackRow(
   const titleLine = h("div", { class: "track-title-line" }, [
     h("span", { class: "track-title", text: track.title, attrs: { title: track.title } }),
   ]);
-  if (!track.playable) titleLine.append(h("span", { class: "badge", text: "Unavailable" }));
+  if (!track.playable) {
+    // Short label on the row; the full reason (incl. formats) on hover.
+    const why = track.unavailable ?? "";
+    const label = why.startsWith("Go+") ? "Go+" : why.startsWith("Not available in your country") ? "Not in your country" : why.startsWith("Protected") ? "Protected" : "Unavailable";
+    titleLine.append(h("span", { class: `badge${label === "Go+" ? " badge-go" : ""}`, text: label, attrs: { title: why || "Can't be played here" } }));
+  }
 
   const artistEl = h("span", { class: "track-artist", text: track.artist });
   if (handlers.artist && track.artist) {

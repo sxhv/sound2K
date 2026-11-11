@@ -4552,3 +4552,11 @@ button.home-card {
   margin: 4px 8px;
   background: rgba(255, 255, 255, 0.08);
 }
+
+/* Go+ badge, like SoundCloud's */
+.badge.badge-go {
+  color: #fff;
+  border-color: transparent;
+  background: linear-gradient(90deg, #ff3a6e, #ff7a1a);
+  font-weight: 700;
+}

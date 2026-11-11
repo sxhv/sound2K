@@ -246,6 +246,7 @@ mod tests {
             downloadable: false,
             artist_id: None,
             plays: None,
+            unavailable: None,
         }
     }
 

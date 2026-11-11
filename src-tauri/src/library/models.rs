@@ -25,6 +25,9 @@ pub struct Track {
     /// Play count shown on SoundCloud (`None` = unknown / hidden by the artist).
     #[serde(default)]
     pub plays: Option<u64>,
+    /// Why it can't be played here, when `playable` is false.
+    #[serde(default)]
+    pub unavailable: Option<String>,
 }
 
 /// A SoundCloud user, as shown on an artist page or in search.

@@ -23,6 +23,8 @@ export interface Track {
   downloadable?: boolean;
   /** Play count on SoundCloud (null/undefined = unknown or hidden). */
   plays?: number | null;
+  /** Why it can't be played here (when playable is false). */
+  unavailable?: string | null;
 }
 
 export interface PlaylistSummary {

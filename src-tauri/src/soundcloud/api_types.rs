@@ -168,9 +168,60 @@ pub struct ApiTrack {
     pub downloadable: Option<bool>,
     #[serde(default)]
     pub playback_count: Option<u64>,
+    /// Release info from labels / distributors (official artist name).
+    #[serde(default)]
+    pub publisher_metadata: Option<ApiPublisher>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct ApiPublisher {
+    #[serde(default)]
+    pub artist: Option<String>,
 }
 
 impl ApiTrack {
+    /// Why this track can't be played here (`None` = playable).
+    pub fn unavailable_reason(&self) -> Option<String> {
+        if self.policy.as_deref() == Some("BLOCK") {
+            return Some("Not available in your country".into());
+        }
+        if self.streamable == Some(false) {
+            return Some("The artist turned off streaming".into());
+        }
+        let list = self
+            .media
+            .as_ref()
+            .map(|m| m.transcodings.as_slice())
+            .unwrap_or(&[]);
+        if pick_transcoding(list).is_some() && self.policy.as_deref() != Some("SNIP") {
+            return None;
+        }
+        if self.policy.as_deref() == Some("SNIP")
+            || (!list.is_empty() && list.iter().all(|t| t.snipped == Some(true)))
+        {
+            return Some("Go+ only (SoundCloud subscription)".into());
+        }
+        if list.is_empty() {
+            return Some("SoundCloud offers no stream for this track".into());
+        }
+        let formats = list
+            .iter()
+            .map(|t| t.describe())
+            .collect::<Vec<_>>()
+            .join(", ");
+        let encrypted_only = list.iter().all(|t| {
+            t.snipped == Some(true)
+                || t.format
+                    .protocol
+                    .as_deref()
+                    .is_some_and(|p| p.contains("encrypted"))
+        });
+        if encrypted_only {
+            return Some(format!("Protected (DRM) streams only. Offered: {formats}"));
+        }
+        Some(format!("Format not supported yet. Offered: {formats}"))
+    }
+
     /// Playlists return only the first few tracks in full; the rest are
     /// stubs with just an id.
     pub fn is_stub(&self) -> bool {
@@ -178,17 +229,23 @@ impl ApiTrack {
     }
 
     pub fn into_track(self, liked_at_ms: Option<i64>) -> Track {
-        let policy_ok = !matches!(self.policy.as_deref(), Some("BLOCK") | Some("SNIP"));
-        let has_streams = self
-            .media
-            .as_ref()
-            .is_some_and(|m| pick_transcoding(&m.transcodings).is_some());
-        let playable = self.streamable != Some(false) && policy_ok && has_streams;
+        let unavailable = self.unavailable_reason();
+        let playable = unavailable.is_none();
         let artist_id = self.user.as_ref().map(|u| u.id);
-        let (artist, avatar) = match self.user {
+        // Like soundcloud.com: the release's artist name when the label gave
+        // one, otherwise the uploader's name.
+        let official = self
+            .publisher_metadata
+            .as_ref()
+            .and_then(|p| p.artist.as_deref())
+            .map(str::trim)
+            .filter(|a| !a.is_empty())
+            .map(str::to_string);
+        let (uploader, avatar) = match self.user {
             Some(u) => (u.username.unwrap_or_default(), u.avatar_url),
             None => (String::new(), None),
         };
+        let artist = official.unwrap_or(uploader);
         Track {
             id: format!("sc:{}", self.id),
             title: self.title.unwrap_or_else(|| "Untitled".into()),
@@ -202,6 +259,7 @@ impl ApiTrack {
             downloadable: self.downloadable == Some(true),
             artist_id,
             plays: self.playback_count,
+            unavailable,
         }
     }
 }
@@ -435,5 +493,34 @@ mod tests {
         )
         .unwrap();
         assert!(!track.into_track(None).playable);
+    }
+
+    #[test]
+    fn explains_why_a_track_is_unavailable_and_uses_the_official_artist() {
+        let parse = |json: &str| {
+            serde_json::from_str::<ApiTrack>(json)
+                .unwrap()
+                .into_track(None)
+        };
+        let go = parse(
+            r#"{"id": 1, "title": "a", "policy": "SNIP", "media": {"transcodings": [{"url": "x", "snipped": true, "format": {"protocol": "hls", "mime_type": "audio/mpeg"}}]}}"#,
+        );
+        assert!(go.unavailable.unwrap().starts_with("Go+"));
+        let drm = parse(
+            r#"{"id": 2, "title": "b", "policy": "MONETIZE", "media": {"transcodings": [{"url": "x", "format": {"protocol": "ctr-encrypted-hls", "mime_type": "audio/mp4"}}]}}"#,
+        );
+        assert!(drm.unavailable.unwrap().starts_with("Protected"));
+        let opus = parse(
+            r#"{"id": 3, "title": "c", "media": {"transcodings": [{"url": "x", "format": {"protocol": "hls", "mime_type": "audio/ogg; codecs=\"opus\""}}]}}"#,
+        );
+        assert!(opus
+            .unavailable
+            .unwrap()
+            .starts_with("Format not supported"));
+        let ok = parse(
+            r#"{"id": 4, "title": "d", "user": {"id": 9, "username": "uploader"}, "publisher_metadata": {"artist": "Real Artist"}, "media": {"transcodings": [{"url": "x", "format": {"protocol": "progressive", "mime_type": "audio/mpeg"}}]}}"#,
+        );
+        assert!(ok.playable && ok.unavailable.is_none());
+        assert_eq!(ok.artist, "Real Artist");
     }
 }
