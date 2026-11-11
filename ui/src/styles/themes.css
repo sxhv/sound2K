@@ -1,0 +1,330 @@
+/* ==========================================================================
+   Extra themes
+   Glossy family (data-style="glass"): Orange Glass (base.css), Frutiger
+   Aero, Chrome, Bubblegum, Midnight, Song, Light.
+   Matte family (data-style="flat"): Dark (base.css), OLED Black, Winamp.
+   Each theme sets its own background and panels, plus a theme accent that's
+   used when Accent is set to "Theme" (or when a song has no colourful
+   cover). With Accent on "Song", buttons and glows follow the artwork.
+   ========================================================================== */
+
+/* Glass strength (Settings slider): 0 = crisp … 2 = heavy frost. */
+:root:not([data-style="flat"]) {
+  --panel-blur: blur(calc(16px * var(--glass-k, 1))) saturate(150%);
+}
+
+/* --- Frutiger Aero: sky-blue glass, aqua and grass highlights ----------- */
+[data-theme="frutiger-aero"] {
+  --backdrop-opacity: 0.12;
+  --accent: #1fa2ff;
+  --accent-light: #6cc8ff;
+  --accent-dark: #0a6fc2;
+  --text: #f2fbff;
+  --muted: #bcd9ea;
+  --faint: rgba(242, 251, 255, 0.55);
+  --bg: #0a2238;
+  --app-bg:
+    radial-gradient(42% 30% at 82% 8%, rgba(255, 255, 255, 0.16), transparent 70%),
+    radial-gradient(80% 60% at 12% -12%, rgba(120, 210, 255, 0.5), transparent 60%),
+    radial-gradient(60% 50% at 100% 0%, rgba(150, 255, 210, 0.22), transparent 60%),
+    radial-gradient(95% 60% at 50% 118%, rgba(60, 200, 120, 0.42), transparent 62%),
+    linear-gradient(180deg, #13466e 0%, #0b2a45 55%, #082033 100%);
+  --panel-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.06));
+  --panel-solid: #12344f;
+  --panel-border: rgba(190, 235, 255, 0.38);
+  --btn-border: rgba(205, 240, 255, 0.5);
+  --field-bg: linear-gradient(180deg, rgba(0, 25, 45, 0.45), rgba(0, 35, 60, 0.2));
+  --field-border: rgba(190, 235, 255, 0.35);
+  --radius: 16px;
+}
+
+/* --- Chrome: brushed silver, holographic sheen ------------------------- */
+[data-theme="chrome"] {
+  --backdrop-opacity: 0.12;
+  --accent: #8fb0e6;
+  --accent-light: #c9daf7;
+  --accent-dark: #5a74a3;
+  --text: #f3f5f8;
+  --muted: #c3c8d1;
+  --faint: rgba(243, 245, 248, 0.55);
+  --bg: #17191d;
+  --app-bg:
+    radial-gradient(70% 45% at 88% -10%, rgba(170, 200, 255, 0.2), transparent 60%),
+    radial-gradient(55% 40% at 0% 105%, rgba(255, 180, 240, 0.12), transparent 60%),
+    radial-gradient(50% 35% at 40% 0%, rgba(180, 255, 230, 0.08), transparent 60%),
+    linear-gradient(165deg, #474c55 0%, #23262b 38%, #33373e 62%, #16171b 100%);
+  --panel-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.05) 50%, rgba(255, 255, 255, 0.1));
+  --panel-solid: #25282e;
+  --panel-border: rgba(230, 236, 246, 0.36);
+  --panel-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  --btn-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0.12) 49%, rgba(0, 0, 0, 0.18) 51%, rgba(255, 255, 255, 0.12) 100%);
+  --btn-border: rgba(240, 244, 250, 0.55);
+  --btn-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 -1px 0 rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.4);
+  --field-border: rgba(230, 236, 246, 0.35);
+  --radius: 12px;
+}
+
+/* --- Bubblegum: pastel translucent plastic ----------------------------- */
+[data-theme="bubblegum"] {
+  --backdrop-opacity: 0.12;
+  --accent: #ff5fb8;
+  --accent-light: #ff9ad3;
+  --accent-dark: #c42f86;
+  --text: #fff5fb;
+  --muted: #ecc9df;
+  --faint: rgba(255, 245, 251, 0.55);
+  --bg: #24102c;
+  --app-bg:
+    radial-gradient(80% 60% at 8% -10%, rgba(255, 140, 220, 0.48), transparent 60%),
+    radial-gradient(60% 50% at 100% 8%, rgba(170, 140, 255, 0.42), transparent 60%),
+    radial-gradient(80% 60% at 50% 118%, rgba(120, 220, 255, 0.26), transparent 62%),
+    linear-gradient(180deg, #3f1b4a 0%, #24102c 100%);
+  --panel-bg: linear-gradient(180deg, rgba(255, 220, 250, 0.2), rgba(255, 200, 240, 0.07));
+  --panel-solid: #3a1c44;
+  --panel-border: rgba(255, 190, 240, 0.45);
+  --btn-border: rgba(255, 205, 245, 0.5);
+  --field-bg: linear-gradient(180deg, rgba(40, 0, 40, 0.35), rgba(40, 0, 40, 0.15));
+  --field-border: rgba(255, 190, 240, 0.38);
+  --radius: 18px;
+  --radius-sm: 12px;
+}
+
+/* --- Midnight: deep navy and violet glass ------------------------------- */
+[data-theme="midnight"] {
+  --backdrop-opacity: 0.12;
+  --accent: #7c6cff;
+  --accent-light: #aaa0ff;
+  --accent-dark: #4b3cd1;
+  --text: #eef0ff;
+  --muted: #b9bde0;
+  --faint: rgba(238, 240, 255, 0.55);
+  --bg: #090a18;
+  --app-bg:
+    radial-gradient(80% 55% at 15% -10%, rgba(90, 80, 255, 0.32), transparent 60%),
+    radial-gradient(60% 45% at 100% 0%, rgba(170, 90, 255, 0.2), transparent 60%),
+    radial-gradient(80% 55% at 50% 115%, rgba(40, 60, 190, 0.3), transparent 62%),
+    linear-gradient(180deg, #131736 0%, #090a18 100%);
+  --panel-solid: #151a38;
+  --panel-border: rgba(150, 160, 255, 0.26);
+  --btn-border: rgba(170, 170, 255, 0.32);
+  --field-border: rgba(150, 160, 255, 0.28);
+}
+
+/* --- Song: the whole window takes the current artwork ------------------- */
+[data-theme="song"] {
+  --app-bg: #0c0c0e;
+  --panel-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+  --panel-solid: color-mix(in srgb, #141416 85%, var(--accent));
+  --panel-border: rgba(255, 255, 255, 0.16);
+  --btn-border: rgba(255, 255, 255, 0.24);
+  --field-border: rgba(255, 255, 255, 0.2);
+}
+[data-theme="song"] .app-backdrop {
+  --backdrop-opacity: 1;
+}
+[data-theme="song"] .app-backdrop .art-backdrop-layer {
+  filter: blur(70px) saturate(1.8) brightness(0.85);
+}
+
+/* --- Light: bright frosted white ------------------------------------------ */
+[data-theme="light"] {
+  color-scheme: light;
+  --tangerine: var(--accent-dark);
+  --text: #1c1c21;
+  --muted: #5d5d68;
+  --faint: rgba(28, 28, 33, 0.5);
+  --bg: #f2f0ee;
+  --app-bg:
+    radial-gradient(90% 55% at 12% -8%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 62%),
+    radial-gradient(60% 45% at 100% 0%, color-mix(in srgb, var(--accent-light) 14%, transparent), transparent 60%),
+    linear-gradient(180deg, #fbfaf9 0%, #ebe8e5 100%);
+  --panel-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.52));
+  --panel-solid: #fbfaf9;
+  --panel-border: rgba(0, 0, 0, 0.09);
+  --panel-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), inset 0 1px 0 #fff;
+  --btn-bg: linear-gradient(180deg, #fff 0%, #f5f4f3 49%, #ecebea 51%, #f7f6f5 100%);
+  --btn-bg-hover: linear-gradient(180deg, #fff 0%, color-mix(in srgb, var(--accent) 12%, #fff) 100%);
+  --btn-border: rgba(0, 0, 0, 0.13);
+  --btn-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), inset 0 1px 0 #fff;
+  --field-bg: #fff;
+  --field-border: rgba(0, 0, 0, 0.13);
+  --row-hover: rgba(0, 0, 0, 0.04);
+  --row-selected: linear-gradient(90deg, color-mix(in srgb, var(--accent) 20%, transparent), color-mix(in srgb, var(--accent) 6%, transparent));
+  --row-selected-border: color-mix(in srgb, var(--accent) 45%, transparent);
+  --glow-soft: 0 0 8px color-mix(in srgb, var(--accent) 25%, transparent);
+  --backdrop-opacity: 0.35;
+}
+/* Light: keep text readable over artwork, menus and separators. */
+[data-theme="light"] .art-backdrop::after {
+  background: linear-gradient(180deg, rgba(250, 249, 248, 0.45) 0%, rgba(250, 249, 248, 0.82) 100%);
+}
+[data-theme="light"] .menu-sep {
+  background: rgba(0, 0, 0, 0.08);
+}
+[data-theme="light"] .menu .menu-item:hover:not(:disabled),
+[data-theme="light"] .menu .menu-item:focus-visible {
+  color: var(--text);
+}
+[data-theme="light"] .menu .menu-item:hover:not(:disabled) .menu-icon {
+  color: var(--accent-dark);
+}
+[data-theme="light"] .segment:hover {
+  color: var(--text);
+}
+[data-theme="light"] .segmented {
+  background: rgba(0, 0, 0, 0.05);
+}
+[data-theme="light"] .now-playing-view,
+[data-theme="light"] .now-playing-view .np-title,
+[data-theme="light"] .now-playing-view .np-artist {
+  color: var(--text);
+}
+[data-theme="light"] .wordmark {
+  filter: invert(0.88) drop-shadow(0 1px 0 rgba(255, 255, 255, 0.6));
+}
+
+/* --- OLED Black: pure black, only the accent glows ----------------------- */
+[data-theme="oled"] {
+  --text: #f2f2f2;
+  --muted: #a6a6a6;
+  --faint: rgba(242, 242, 242, 0.5);
+  --app-bg: #000;
+  --panel-bg: #0a0a0a;
+  --panel-solid: #0c0c0c;
+  --panel-border: #1d1d1d;
+  --panel-blur: none;
+  --panel-shadow: none;
+  --btn-bg: #111;
+  --btn-bg-hover: #1b1b1b;
+  --btn-border: #272727;
+  --btn-shadow: none;
+  --accent-bg: var(--orange);
+  --accent-border: var(--orange);
+  --glow: none;
+  --glow-soft: none;
+  --field-bg: #000;
+  --field-border: #272727;
+  --row-hover: #0e0e0e;
+  --row-selected: color-mix(in srgb, var(--accent) 14%, transparent);
+  --row-selected-border: color-mix(in srgb, var(--accent) 55%, transparent);
+  --np-bg: #000;
+  --backdrop-opacity: 0.16;
+  --gloss: 0;
+  --radius: 8px;
+  --radius-sm: 6px;
+}
+
+/* --- Winamp Classic: grey bevels, LED green, monospace titles ------------- */
+[data-theme="winamp"] {
+  --backdrop-opacity: 0.12;
+  --accent: #2fe05a;
+  --accent-light: #85ff9c;
+  --accent-dark: #139a33;
+  --text: #dfe3e6;
+  --muted: #9aa3a8;
+  --faint: rgba(223, 227, 230, 0.5);
+  --app-bg: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.018) 0 1px, transparent 1px 3px), #16181a;
+  --panel-bg: #22252a;
+  --panel-solid: #25282d;
+  --panel-border: #474c53;
+  --panel-blur: none;
+  --panel-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.08), inset -1px -1px 0 rgba(0, 0, 0, 0.5);
+  --btn-bg: linear-gradient(180deg, #3e4248, #2a2d32);
+  --btn-bg-hover: linear-gradient(180deg, #4a4f56, #33373c);
+  --btn-border: #5a6168;
+  --btn-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.14), inset -1px -1px 0 rgba(0, 0, 0, 0.55);
+  --accent-bg: var(--orange);
+  --accent-border: var(--orange);
+  --glow: 0 0 6px color-mix(in srgb, var(--accent) 50%, transparent);
+  --glow-soft: none;
+  --field-bg: #0b0c0d;
+  --field-border: #474c53;
+  --row-hover: #1d2024;
+  --row-selected: color-mix(in srgb, var(--accent) 14%, transparent);
+  --row-selected-border: color-mix(in srgb, var(--accent) 55%, transparent);
+  --np-bg: #101112;
+  --gloss: 0;
+  --radius: 3px;
+  --radius-sm: 2px;
+}
+[data-theme="winamp"] :is(.dock-title, .np-title, .mini-title, .track-title) {
+  font-family: "Cascadia Mono", Consolas, "Courier New", monospace;
+  letter-spacing: 0;
+}
+[data-theme="winamp"] :is(.dock-title, .np-title, .mini-title) {
+  color: var(--accent-light);
+  text-shadow: 0 0 6px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+/* --- Theme swatches in Settings ------------------------------------------- */
+.theme-swatch-frutiger-aero .swatch {
+  background: radial-gradient(55% 40% at 50% 22%, #fff, transparent 70%), linear-gradient(180deg, #6cc8ff 0%, #1f8fe0 55%, #3cc878 100%);
+}
+.theme-swatch-chrome .swatch {
+  background: linear-gradient(135deg, #f4f6fa 0%, #9aa1ad 45%, #e6e9ef 55%, #6d7380 100%);
+}
+.theme-swatch-winamp .swatch {
+  background: linear-gradient(135deg, #2a2d32 50%, #2fe05a 50%);
+  border: 1px solid #5a6168;
+}
+.theme-swatch-bubblegum .swatch {
+  background: radial-gradient(55% 40% at 50% 22%, #fff, transparent 70%), linear-gradient(135deg, #ff9ad3, #b48cff);
+}
+.theme-swatch-light .swatch {
+  background: linear-gradient(135deg, #fff 50%, var(--accent) 50%);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+.theme-swatch-oled .swatch {
+  background: radial-gradient(circle at 50% 50%, var(--accent) 0 22%, #000 24%);
+  border: 1px solid #333;
+}
+.theme-swatch-midnight .swatch {
+  background: radial-gradient(55% 40% at 50% 22%, rgba(255, 255, 255, 0.6), transparent 70%), linear-gradient(135deg, #2a2f7a, #7c6cff);
+}
+.theme-swatch-song .swatch {
+  background: conic-gradient(from 200deg, #ff5f6d, #ffc371, #47e891, #3ab0ff, #b06cff, #ff5f6d);
+  filter: blur(0.3px) saturate(1.2);
+}
+
+/* Theme picker: a grid of swatches instead of a long row. */
+.theme-choices {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+}
+.theme-choices .theme-choice {
+  flex: none;
+}
+
+/* Settings: accent + glass rows */
+.look-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.look-row[hidden] {
+  display: none;
+}
+.look-label {
+  width: 52px;
+  font-weight: 600;
+}
+.glass-range {
+  flex: 1;
+}
+.accent-picker {
+  width: 30px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--btn-border);
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
+}
+.accent-picker::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+.accent-picker::-webkit-color-swatch {
+  border: 0;
+  border-radius: 6px;
+}

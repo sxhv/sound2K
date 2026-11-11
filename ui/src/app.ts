@@ -41,6 +41,9 @@ export interface AppHandle {
   jumpToPlaying(): void;
 }
 
+/** Matte themes (no glass effects). */
+const FLAT_THEMES: ReadonlySet<string> = new Set(["dark-orange", "oled", "winamp"]);
+
 export function mountApp(root: HTMLElement, store: AppStore, player: Player, version: string): AppHandle {
   const visualizer = new Visualizer(store, (bars) => api.spectrum(bars));
   const tabs = new Tabs(store);
@@ -105,20 +108,29 @@ export function mountApp(root: HTMLElement, store: AppStore, player: Player, ver
     else if (s.page === "equalizer" || s.page === "sound") store.set(closeToolPage(s));
   });
 
-  // Accent colours (buttons, glows, sliders, visualizer) follow the current
-  // artwork; Sound2K orange when there's no colourful cover.
+  // Accent colours (buttons, glows, sliders, visualizer): the current
+  // artwork's colour, the theme's own colour, or one you picked.
   let colourFor: string | null = null;
   const rootStyle = document.documentElement.style;
   const resetAccent = (): void => {
     for (const name of ["--accent", "--accent-light", "--accent-dark"]) rootStyle.removeProperty(name);
   };
   const applyColour = (s: AppState): void => {
+    if (s.accentMode === "custom" && /^#[0-9a-f]{6}$/i.test(s.accentColor)) {
+      const key = `custom:${s.accentColor}`;
+      if (key === colourFor) return;
+      colourFor = key;
+      rootStyle.setProperty("--accent", s.accentColor);
+      rootStyle.setProperty("--accent-light", `color-mix(in srgb, ${s.accentColor} 70%, #fff)`);
+      rootStyle.setProperty("--accent-dark", `color-mix(in srgb, ${s.accentColor} 72%, #000)`);
+      return;
+    }
     const t = s.player.current;
-    const key = s.artBackgrounds && t ? t.id : null;
+    const key = s.accentMode === "song" && s.artBackgrounds && t ? t.id : null;
     if (key === colourFor) return;
     colourFor = key;
     if (!key || !t) {
-      resetAccent();
+      resetAccent(); // the theme's colour
       return;
     }
     void artColour(t.artworkUrl, (src) => api.artworkColour(src)).then((rgb) => {
@@ -162,7 +174,11 @@ export function mountApp(root: HTMLElement, store: AppStore, player: Player, ver
   }
 
   const render = (s: AppState, prev: AppState | null): void => {
-    if (!prev || s.theme !== prev.theme) document.documentElement.dataset.theme = s.theme;
+    if (!prev || s.theme !== prev.theme) {
+      document.documentElement.dataset.theme = s.theme;
+      document.documentElement.dataset.style = FLAT_THEMES.has(s.theme) ? "flat" : "glass";
+    }
+    if (!prev || s.glass !== prev.glass) rootStyle.setProperty("--glass-k", String(s.glass));
     if (!prev) {
       document.documentElement.classList.toggle("is-mini", s.mini);
     } else if (s.mini !== prev.mini) {
@@ -171,8 +187,16 @@ export function mountApp(root: HTMLElement, store: AppStore, player: Player, ver
     } else if (s.pinned !== prev.pinned) {
       windowControls.setMode(s.mini, s.pinned).catch((err: unknown) => toast(`Couldn't resize the window: ${errorMessage(err)}`, "error"));
     }
-    if (!prev || s.player.current !== prev.player.current || s.artBackgrounds !== prev.artBackgrounds) {
-      backdrop.set(s.player.current, s.artBackgrounds);
+    if (
+      !prev ||
+      s.player.current !== prev.player.current ||
+      s.artBackgrounds !== prev.artBackgrounds ||
+      s.theme !== prev.theme ||
+      s.accentMode !== prev.accentMode ||
+      s.accentColor !== prev.accentColor
+    ) {
+      // The Song theme always shows the artwork behind the window.
+      backdrop.set(s.player.current, s.artBackgrounds || s.theme === "song");
       applyColour(s);
     }
     // Close overlays when they no longer make sense (deferred: we're inside a render).

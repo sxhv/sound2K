@@ -52,7 +52,21 @@ export interface AppError {
   message: string;
 }
 
-export type Theme = "orange-glass" | "dark-orange";
+export type Theme =
+  | "orange-glass"
+  | "dark-orange"
+  | "frutiger-aero"
+  | "chrome"
+  | "winamp"
+  | "bubblegum"
+  | "light"
+  | "oled"
+  | "midnight"
+  | "song";
+
+/** Where the accent colour comes from: the song's artwork, the theme, or a
+ * colour you pick. */
+export type AccentMode = "song" | "theme" | "custom";
 
 export type SortKey =
   | "recently-liked"
@@ -95,6 +109,11 @@ export interface Settings {
   mascot: boolean;
   /** Glow around the window edges on drum hits. */
   aura: boolean;
+  accentMode: AccentMode;
+  /** "#rrggbb" for the custom accent. */
+  accentColor: string;
+  /** Glass blur strength 0..2 (1 = default). */
+  glass: number;
   /** Show "Listening to …" on Discord. */
   discordStatus: boolean;
   /** Look for a newer version on GitHub at startup. */

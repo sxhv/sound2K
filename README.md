@@ -36,7 +36,8 @@
 - **Song colours:** buttons, sliders, glows and the visualizer take on the colour of the current cover, and fade into the next one
 - **Now Playing** full-window view with big artwork on a blurred backdrop
 - Apple Music-style touches: playlist headers, slide-out queue, springy buttons, scrolling titles
-- **Glass** and **Dark** themes, plus a live **visualizer**
+- **10 themes:** Glass, Dark, Frutiger Aero, Chrome, Bubblegum, Midnight, Song (the whole window takes the cover art), Light, OLED Black and Winamp; accent from the song, the theme or your own colour, and a glass-strength slider
+- A live **visualizer**
 - **Beat glow:** the window edges pulse in the song's colour on every drum hit (turn it off in Settings)
 - **The cat** 🐱: dances to the bass, naps when you pause, throws hearts when you like a song
 

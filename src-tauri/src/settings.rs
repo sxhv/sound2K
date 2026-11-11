@@ -22,6 +22,28 @@ pub enum Theme {
     #[default]
     OrangeGlass,
     DarkOrange,
+    FrutigerAero,
+    Chrome,
+    Winamp,
+    Bubblegum,
+    Light,
+    Oled,
+    Midnight,
+    /// The whole window takes the current song's artwork.
+    Song,
+}
+
+/// Where the accent colour (buttons, glows, visualizer) comes from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum AccentMode {
+    /// The current song's artwork.
+    #[default]
+    Song,
+    /// The theme's own colour.
+    Theme,
+    /// `accent_color`.
+    Custom,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -76,6 +98,11 @@ pub struct Settings {
     pub discord_status: bool,
     /// Look for a newer version on GitHub when the app starts.
     pub update_check: bool,
+    pub accent_mode: AccentMode,
+    /// "#rrggbb", used when `accent_mode` is custom.
+    pub accent_color: String,
+    /// Glass blur strength: 0 (crisp) … 2 (heavy frost); 1 = default.
+    pub glass: f32,
 }
 
 impl Default for Settings {
@@ -97,6 +124,9 @@ impl Default for Settings {
             aura: true,
             discord_status: false,
             update_check: true,
+            accent_mode: AccentMode::default(),
+            accent_color: DEFAULT_ACCENT.into(),
+            glass: 1.0,
         }
     }
 }
@@ -131,8 +161,23 @@ impl Settings {
         if self.eq_preset.len() > 32 {
             self.eq_preset = "custom".into();
         }
+        if !is_hex_colour(&self.accent_color) {
+            self.accent_color = DEFAULT_ACCENT.into();
+        }
+        self.glass = if self.glass.is_finite() {
+            self.glass.clamp(0.0, 2.0)
+        } else {
+            1.0
+        };
         self
     }
+}
+
+const DEFAULT_ACCENT: &str = "#ff7a1a";
+
+/// "#rrggbb".
+fn is_hex_colour(s: &str) -> bool {
+    s.len() == 7 && s.starts_with('#') && s[1..].chars().all(|c| c.is_ascii_hexdigit())
 }
 
 /// Parse settings text; anything unreadable becomes the defaults.
@@ -169,6 +214,19 @@ pub fn save(app: &AppHandle, settings: Settings) -> AppResult<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn new_settings_are_checked() {
+        let s = parse(
+            r##"{ "theme": "frutiger-aero", "accentMode": "custom", "accentColor": "#12ab9F", "glass": 9 }"##,
+        );
+        assert_eq!(s.theme, Theme::FrutigerAero);
+        assert_eq!(s.accent_mode, AccentMode::Custom);
+        assert_eq!(s.accent_color, "#12ab9F");
+        assert_eq!(s.glass, 2.0);
+        let bad = parse(r##"{ "accentColor": "red; } body { x" }"##);
+        assert_eq!(bad.accent_color, DEFAULT_ACCENT);
+    }
 
     #[test]
     fn partial_file_keeps_defaults_for_missing_fields() {

@@ -1,5 +1,6 @@
 import "./styles/base.css";
 import "./styles/components.css";
+import "./styles/themes.css";
 
 import { api, errorMessage } from "./api";
 import { loadLibrary, syncLibrary } from "./library";
@@ -32,6 +33,9 @@ function settingsOf(s: AppState): Settings {
     artBackgrounds: s.artBackgrounds,
     mascot: s.mascot,
     aura: s.aura,
+    accentMode: s.accentMode,
+    accentColor: s.accentColor,
+    glass: s.glass,
     discordStatus: s.discordStatus,
     updateCheck: s.updateCheck,
   };

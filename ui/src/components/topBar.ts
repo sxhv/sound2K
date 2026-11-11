@@ -2,7 +2,7 @@ import { button, h } from "../lib/dom";
 import { windowControls } from "../lib/windowControls";
 import { icon } from "../lib/icons";
 import { togglePage as togglePageState, type AppState, type AppStore } from "../state";
-import type { Theme } from "../types";
+import type { AccentMode, Theme } from "../types";
 import { api, errorMessage } from "../api";
 import { formatBytes } from "../lib/format";
 import { toast } from "./toast";
@@ -13,7 +13,27 @@ import { closePopover, isPopoverOpenFor, openPopover } from "./popover";
 const THEMES: readonly { id: Theme; label: string }[] = [
   { id: "orange-glass", label: "Glass" },
   { id: "dark-orange", label: "Dark" },
+  { id: "frutiger-aero", label: "Frutiger Aero" },
+  { id: "chrome", label: "Chrome" },
+  { id: "bubblegum", label: "Bubblegum" },
+  { id: "midnight", label: "Midnight" },
+  { id: "song", label: "Song" },
+  { id: "light", label: "Light" },
+  { id: "oled", label: "OLED Black" },
+  { id: "winamp", label: "Winamp" },
 ];
+
+const ACCENTS: readonly { id: AccentMode; label: string; tip: string }[] = [
+  { id: "song", label: "Song", tip: "Follow each song's artwork" },
+  { id: "theme", label: "Theme", tip: "The theme's own colour" },
+  { id: "custom", label: "Custom", tip: "Pick your own colour" },
+];
+
+/** Themes with a colour identity: picking one sets Accent to "Theme". */
+const OWN_COLOUR: ReadonlySet<Theme> = new Set(["frutiger-aero", "chrome", "bubblegum", "midnight", "winamp"]);
+
+/** Themes without glass (the Glass slider doesn't apply). */
+const FLAT: ReadonlySet<Theme> = new Set(["dark-orange", "oled", "winamp"]);
 
 export interface AccountActions {
   signIn(): void;
@@ -156,14 +176,48 @@ export class TopBar {
             [h("span", { class: "swatch", attrs: { "aria-hidden": "true" } }), h("span", { class: "theme-name", text: t.label })],
           );
           b.addEventListener("click", () => {
-            this.store.set({ theme: t.id });
+            // Themes with their own colours use them for the accent; the
+            // others go back to following the song (a custom colour stays).
+            const mode = this.store.get().accentMode;
+            const accentMode = OWN_COLOUR.has(t.id) ? "theme" : mode === "theme" ? "song" : mode;
+            this.store.set({ theme: t.id, accentMode });
             renderThemes();
+            renderLook();
           });
           return b;
         }),
       );
     };
+
+    // Accent: Song / Theme / Custom (+ colour picker); Glass strength.
+    const accentRow = h("div", { class: "segmented accent-modes", attrs: { role: "radiogroup", "aria-label": "Accent colour" } });
+    const picker = h("input", { class: "accent-picker", attrs: { type: "color", "aria-label": "Accent colour", title: "Pick a colour" } });
+    picker.addEventListener("input", () => this.store.set({ accentColor: picker.value, accentMode: "custom" }));
+    const glass = h("input", { class: "range glass-range", attrs: { type: "range", min: "0", max: "2", step: "0.1", "aria-label": "Glass strength" } });
+    glass.addEventListener("input", () => this.store.set({ glass: Number(glass.value) }));
+    const glassRow = h("div", { class: "look-row" }, [h("span", { class: "look-label", text: "Glass" }), h("span", { class: "small", text: "Crisp" }), glass, h("span", { class: "small", text: "Frosted" })]);
+    const renderLook = (): void => {
+      const st = this.store.get();
+      accentRow.replaceChildren(
+        ...ACCENTS.map((a) => {
+          const on = st.accentMode === a.id;
+          const b = h("button", { class: `segment${on ? " is-selected" : ""}`, text: a.label, attrs: { type: "button", role: "radio", "aria-checked": String(on), title: a.tip } });
+          b.addEventListener("click", () => {
+            this.store.set({ accentMode: a.id });
+            renderLook();
+            if (a.id === "custom") picker.click();
+          });
+          return b;
+        }),
+      );
+      picker.value = st.accentColor;
+      picker.hidden = st.accentMode !== "custom";
+      glass.value = String(st.glass);
+      glassRow.hidden = FLAT.has(st.theme);
+    };
     renderThemes();
+    renderLook();
+    const accentLine = h("div", { class: "look-row" }, [h("span", { class: "look-label", text: "Accent" }), accentRow, picker]);
 
     const account: HTMLElement[] = [];
     if (s.account) {
@@ -199,6 +253,8 @@ export class TopBar {
       ...this.buildPlaybackSettings(),
       h("h3", { text: "Theme" }),
       choices,
+      accentLine,
+      glassRow,
       h("h3", { text: "Storage" }),
       ...this.buildStorageSettings(),
       h("h3", { text: "About" }),

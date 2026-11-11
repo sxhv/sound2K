@@ -11,6 +11,7 @@ import type {
   SortKey,
   TabId,
   Theme,
+  AccentMode,
   Track,
 } from "./types";
 
@@ -137,6 +138,9 @@ export interface AppState {
   artBackgrounds: boolean;
   mascot: boolean;
   aura: boolean;
+  accentMode: AccentMode;
+  accentColor: string;
+  glass: number;
   discordStatus: boolean;
   updateCheck: boolean;
   /** Set when a newer version was found. */
@@ -187,6 +191,9 @@ export const DEFAULT_SETTINGS: Settings = {
   artBackgrounds: true,
   mascot: true,
   aura: true,
+  accentMode: "song",
+  accentColor: "#ff7a1a",
+  glass: 1,
   discordStatus: false,
   updateCheck: true,
 };
@@ -226,6 +233,9 @@ export function createInitialState(settings: Settings): AppState {
     artBackgrounds: settings.artBackgrounds ?? DEFAULT_SETTINGS.artBackgrounds,
     mascot: settings.mascot ?? DEFAULT_SETTINGS.mascot,
     aura: settings.aura ?? DEFAULT_SETTINGS.aura,
+    accentMode: settings.accentMode ?? DEFAULT_SETTINGS.accentMode,
+    accentColor: settings.accentColor ?? DEFAULT_SETTINGS.accentColor,
+    glass: settings.glass ?? DEFAULT_SETTINGS.glass,
     discordStatus: settings.discordStatus ?? DEFAULT_SETTINGS.discordStatus,
     updateCheck: settings.updateCheck ?? DEFAULT_SETTINGS.updateCheck,
     update: null,
