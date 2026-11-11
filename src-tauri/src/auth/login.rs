@@ -21,6 +21,10 @@ use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 use url::Url;
 
 pub const LOGIN_LABEL: &str = "login";
+/// Hidden window that lets soundcloud.com renew an expired session.
+const REFRESH_LABEL: &str = "session-refresh";
+const REFRESH_URL: &str = "https://soundcloud.com/";
+const REFRESH_TIMEOUT: Duration = Duration::from_secs(25);
 /// Popups opened by the sign-in page (e.g. "Sign in with Google").
 const POPUP_LABEL_PREFIX: &str = "login-popup-";
 static POPUP_COUNTER: AtomicU32 = AtomicU32::new(0);
@@ -165,6 +169,50 @@ pub async fn sign_in_and_capture_token(app: &AppHandle) -> AppResult<String> {
             return Ok(token);
         }
     }
+}
+
+/// SoundCloud's login token is short-lived; its website renews it with the
+/// session cookies saved when you signed in. Load soundcloud.com in a hidden
+/// window (same browser profile) so the site can do that, then read the new
+/// token. Returns `None` if the session can't be renewed (signed out
+/// elsewhere, password changed, …): then the user has to sign in again.
+pub async fn refresh_session(app: &AppHandle, old_token: &str) -> AppResult<Option<String>> {
+    if let Some(existing) = app.get_webview_window(REFRESH_LABEL) {
+        let _ = existing.close();
+    }
+    let window = WebviewWindowBuilder::new(
+        app,
+        REFRESH_LABEL,
+        WebviewUrl::External(REFRESH_URL.parse()?),
+    )
+    .title("Sound2K")
+    .visible(false)
+    .skip_taskbar(true)
+    .inner_size(400.0, 300.0)
+    .data_directory(paths::webview_data_dir(app)?)
+    .additional_browser_args(paths::BROWSER_ARGS)
+    .on_navigation(navigation_allowed)
+    .build()?;
+
+    let cookie_url: Url = COOKIE_URL.parse()?;
+    let started = Instant::now();
+    let result = loop {
+        tokio::time::sleep(POLL_EVERY).await;
+        if started.elapsed() > REFRESH_TIMEOUT {
+            break None;
+        }
+        let Ok(cookies) = window.cookies_for_url(cookie_url.clone()) else {
+            continue;
+        };
+        if let Some(cookie) = cookies
+            .iter()
+            .find(|c| c.name() == COOKIE_NAME && !c.value().is_empty() && c.value() != old_token)
+        {
+            break Some(cookie.value().to_string());
+        }
+    };
+    let _ = window.close();
+    Ok(result)
 }
 
 #[cfg(test)]

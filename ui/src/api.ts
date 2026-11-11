@@ -1,15 +1,45 @@
 // Typed wrappers around the Rust commands registered in src-tauri/src/lib.rs.
 // (Playback commands live in player/tauriTransport.ts.)
-import { invoke } from "@tauri-apps/api/core";
+import { invoke as rawInvoke } from "@tauri-apps/api/core";
+import { errorKind } from "./lib/errors";
 import type { Account, AppInfo, Artist, FeedItem, Paged, DiscordPresence, PlaylistSummary, Session, Settings, StorageInfo, Track, UpdateInfo } from "./types";
 
 export { errorKind, errorMessage } from "./lib/errors";
+
+// SoundCloud's login token is short-lived. When a request fails because it
+// expired, let soundcloud.com renew the session in the background (no
+// sign-in window), then retry the request once. Several requests failing
+// at the same moment share one renewal.
+const NO_RENEW = new Set(["refresh_session", "start_login", "logout", "get_account"]);
+let renewing: Promise<boolean> | null = null;
+
+function renewSession(): Promise<boolean> {
+  renewing ??= rawInvoke<boolean>("refresh_session")
+    .catch(() => false)
+    .finally(() => {
+      // Let the next expiry (hours later) try again.
+      setTimeout(() => (renewing = null), 30_000);
+    });
+  return renewing;
+}
+
+/** `invoke` that renews an expired SoundCloud session and retries once. */
+export async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
+  try {
+    return await rawInvoke<T>(cmd, args);
+  } catch (err) {
+    if (errorKind(err) !== "auth" || NO_RENEW.has(cmd)) throw err;
+    if (!(await renewSession())) throw err;
+    return rawInvoke<T>(cmd, args);
+  }
+}
 
 export const api = {
   appInfo: () => invoke<AppInfo>("app_info"),
   getAccount: () => invoke<Account | null>("get_account"),
   startLogin: () => invoke<Account>("start_login"),
   logout: () => invoke<void>("logout"),
+  refreshSession: () => renewSession(),
   likedTracks: (refresh = false) => invoke<Track[]>("get_liked_tracks", { refresh }),
   playlists: (refresh = false) => invoke<PlaylistSummary[]>("get_playlists", { refresh }),
   playlistTracks: (id: string) => invoke<Track[]>("get_playlist_tracks", { id }),

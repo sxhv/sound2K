@@ -81,6 +81,30 @@ pub async fn start_login(app: AppHandle, sc: State<'_, SoundCloud>) -> AppResult
     Ok(account)
 }
 
+/// Renew an expired SoundCloud session without asking you to sign in again
+/// (soundcloud.com renews it in a hidden window). Returns false if it can't.
+#[tauri::command]
+pub async fn refresh_session(app: AppHandle, sc: State<'_, SoundCloud>) -> AppResult<bool> {
+    let Some(old) = token_store::load()? else {
+        return Ok(false);
+    };
+    let Some(token) = login::refresh_session(&app, &old).await? else {
+        return Ok(false);
+    };
+    sc.set_token(Some(token.clone()));
+    match sc.me().await {
+        Ok(account) => {
+            token_store::save(&token)?;
+            cache::write(&app, CacheFile::Account, &account)?;
+            Ok(true)
+        }
+        Err(_) => {
+            sc.set_token(Some(old));
+            Ok(false)
+        }
+    }
+}
+
 /// Forget the session: token, cached library, and the app's web cookies.
 #[tauri::command]
 pub async fn logout(

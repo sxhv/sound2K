@@ -102,6 +102,7 @@ pub fn run() {
             commands::get_feed,
             commands::follow_artist,
             commands::get_followings,
+            commands::refresh_session,
             commands::get_local_likes,
             commands::check_for_update,
             commands::open_update_page,

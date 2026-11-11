@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "../api";
 import type { Track } from "../types";
 import type { EngineStatus, Transport } from "./transport";
 
