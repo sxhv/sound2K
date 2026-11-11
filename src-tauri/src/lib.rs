@@ -15,6 +15,7 @@ mod player;
 mod session;
 mod settings;
 mod soundcloud;
+mod standin;
 mod updates;
 mod window;
 
@@ -102,6 +103,7 @@ pub fn run() {
             commands::get_feed,
             commands::follow_artist,
             commands::get_followings,
+            commands::find_standin,
             commands::refresh_session,
             commands::get_local_likes,
             commands::check_for_update,

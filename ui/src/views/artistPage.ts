@@ -1,5 +1,6 @@
 // Artist page: banner, avatar, follow button, and their popular tracks,
 // uploads, reposts and playlists.
+import { canTry } from "../player/player";
 import { formatCount, loadArtistSection, openPlaylist, toggleFollow } from "../browse";
 import { showMenu } from "../components/popover";
 import { icon } from "../lib/icons";
@@ -95,7 +96,7 @@ export class ArtistPage {
       class: "glass-btn small",
       onClick: () => {
         const list = this.panel.visibleTracks;
-        const i = list.findIndex((t) => t.playable);
+        const i = list.findIndex((t) => canTry(t));
         if (i >= 0) player.playFromList(list, i);
       },
     });

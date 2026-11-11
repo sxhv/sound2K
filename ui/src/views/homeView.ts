@@ -3,6 +3,7 @@
 //   New from artists you follow → Because you played… → Artists you follow →
 //   Recently liked → Your playlists
 // "See all" (the row title) opens the full feed / recently played list.
+import { canTry } from "../player/player";
 import { api, errorMessage } from "../api";
 import { formatCount, loadFeed, openArtist, openArtistOf, openPlaylist } from "../browse";
 import { catSvg } from "../components/mascot";
@@ -198,7 +199,7 @@ export class HomeView {
   }
 
   private playList(list: readonly Track[], index: number): void {
-    const i = list.findIndex((t, k) => k >= index && t.playable);
+    const i = list.findIndex((t, k) => k >= index && canTry(t));
     if (i >= 0) this.player.playFromList(list, i);
   }
 

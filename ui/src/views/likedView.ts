@@ -1,4 +1,5 @@
 import { TrackListPanel } from "../components/trackListPanel";
+import { canTry } from "../player/player";
 import { button, h } from "../lib/dom";
 import { plural } from "../lib/format";
 import type { Player } from "../player/player";
@@ -38,7 +39,7 @@ export class LikedView {
       class: "glass-btn accent small",
       onClick: () => {
         const list = this.panel.visibleTracks;
-        const i = list.findIndex((t) => t.playable);
+        const i = list.findIndex((t) => canTry(t));
         if (i >= 0) player.playFromList(list, i);
       },
     });

@@ -30,6 +30,18 @@ export interface PlayerDeps {
   transport: Transport;
   /** Similar tracks for autoplay. */
   related: (track: Track) => Promise<Track[]>;
+  /** For a protected (DRM-only) track: an unprotected upload of the same song. */
+  standin?: (track: Track) => Promise<Track | null>;
+}
+
+/** Only offered as DRM-protected streams (Sound2K plays a stand-in instead). */
+export function isProtected(t: Track): boolean {
+  return !t.playable && (t.unavailable ?? "").startsWith("Protected");
+}
+
+/** Playable as is, or worth looking for a stand-in. */
+export function canTry(t: Track): boolean {
+  return t.playable || isProtected(t);
 }
 
 interface StartOptions {
@@ -50,6 +62,9 @@ export class Player {
   private readonly notify: (message: string) => void;
   private readonly transport: Transport;
   private readonly related: (track: Track) => Promise<Track[]>;
+  private readonly standin: ((track: Track) => Promise<Track | null>) | null;
+  /** Stand-in lookups already done: original id → stand-in (or null). */
+  private readonly standins = new Map<string, Track | null>();
 
   constructor(
     private readonly store: AppStore,
@@ -58,6 +73,7 @@ export class Player {
     this.notify = deps.notify;
     this.transport = deps.transport;
     this.related = deps.related;
+    this.standin = deps.standin ?? null;
     void this.transport.setVolume(this.effectiveVolume()).catch(() => undefined);
   }
 
@@ -91,7 +107,7 @@ export class Player {
   playFromList(list: readonly Track[], index: number): void {
     const track = list[index];
     if (!track) return;
-    if (!track.playable) {
+    if (!canTry(track)) {
       this.notify(`“${track.title}” is unavailable and can't be played.`);
       return;
     }
@@ -184,7 +200,7 @@ export class Player {
     let skipped = 0;
     while (queue.length > 0) {
       const t = queue.shift() as Track;
-      if (!t.playable) {
+      if (!canTry(t) || this.standins.get(t.id) === null) {
         skipped++;
         continue;
       }
@@ -300,7 +316,7 @@ export class Player {
     const queue = this.store.get().queue;
     const track = queue[index];
     if (!track) return;
-    if (!track.playable) {
+    if (!canTry(track)) {
       this.notify(`“${track.title}” is unavailable and can't be played.`);
       return;
     }
@@ -335,6 +351,10 @@ export class Player {
   }
 
   private start(track: Track, opts: StartOptions = {}): void {
+    if (isProtected(track)) {
+      void this.startStandin(track, opts);
+      return;
+    }
     const s = this.store.get();
     const recent = [track, ...s.recent.filter((t) => t.id !== track.id)].slice(0, MAX_RECENT);
     this.needsLoad = false;
@@ -373,6 +393,27 @@ export class Player {
         this.next(true, true);
       },
     );
+  }
+
+  /** A protected track: play an unprotected upload of the same song, or
+   * move on if there isn't one. */
+  private async startStandin(track: Track, opts: StartOptions): Promise<void> {
+    const token = ++this.loadToken;
+    this.setPlayer({ current: track, positionMs: 0, playing: true, loading: true });
+    let found = this.standins.get(track.id);
+    if (found === undefined && this.standin) {
+      found = await this.standin(track).catch(() => null);
+      this.standins.set(track.id, found);
+    }
+    if (token !== this.loadToken) return;
+    if (found) {
+      this.notify(`“${track.title}” is protected here, so an unprotected upload of the same song is playing.`);
+      this.start(found, opts);
+      return;
+    }
+    this.setPlayer({ loading: false });
+    this.notify(`“${track.title}” is protected and there's no other version to play. Try ⋯ → Open on SoundCloud.`);
+    this.next(true, true);
   }
 
   private syncPolling(): void {

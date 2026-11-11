@@ -1,4 +1,5 @@
 import { openPlaylist } from "../browse";
+import { canTry } from "../player/player";
 import { playlistArt } from "../components/playlistArt";
 export { playlistArt };
 import { TrackListPanel } from "../components/trackListPanel";
@@ -80,7 +81,7 @@ export class PlaylistsView {
       class: "glass-btn accent small",
       onClick: () => {
         const list = tracks();
-        const i = list.findIndex((t) => t.playable);
+        const i = list.findIndex((t) => canTry(t));
         if (i >= 0) player.playFromList(list, i);
       },
     });

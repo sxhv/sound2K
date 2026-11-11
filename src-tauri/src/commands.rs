@@ -18,6 +18,7 @@ use crate::player::{stream, BoxedSource, Player, PlayerStatus, Preloaded};
 use crate::session::{self, Session};
 use crate::settings::{self, Settings};
 use crate::soundcloud::{SoundCloud, StreamKind};
+use crate::standin;
 use rodio::Source;
 use serde::Serialize;
 use std::sync::Arc;
@@ -183,6 +184,16 @@ pub async fn search_tracks(
     next: Option<String>,
 ) -> AppResult<Paged<Track>> {
     sc.search_tracks(query(&q)?, next).await
+}
+
+/// For a protected (DRM-only) track: another upload of the same song by the
+/// same artist, of the same length, that can be played. `None` if there
+/// isn't one.
+#[tauri::command]
+pub async fn find_standin(sc: State<'_, SoundCloud>, track: Track) -> AppResult<Option<Track>> {
+    let q = format!("{} {}", track.artist, track.title);
+    let results = sc.search_tracks(query(&q)?, None).await?;
+    Ok(standin::pick(&track, results.items))
 }
 
 #[tauri::command]

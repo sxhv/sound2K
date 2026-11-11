@@ -49,6 +49,7 @@ export const api = {
   saveHistory: (tracks: Track[]) => invoke<void>("save_history", { tracks }),
   likeTrack: (track: Track, like: boolean) => invoke<void>("like_track", { track, like }),
   localLikes: () => invoke<Track[]>("get_local_likes"),
+  findStandin: (track: Track) => invoke<Track | null>("find_standin", { track }),
   createPlaylist: (title: string, tracks: Track[]) => invoke<PlaylistSummary>("create_playlist", { title, tracks }),
   renamePlaylist: (playlistId: string, title: string) => invoke<PlaylistSummary>("rename_playlist", { playlistId, title }),
   editPlaylistTrack: (playlistId: string, track: Track, action: "add" | "remove" | "up" | "down") =>

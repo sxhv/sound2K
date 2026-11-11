@@ -1,5 +1,6 @@
 // A searchable / filterable / sortable track list used by Liked Songs,
 // playlist detail and Recently Played.
+import { canTry } from "../player/player";
 import { button, h } from "../lib/dom";
 import { applyQuery } from "../lib/filterSort";
 import type { Player } from "../player/player";
@@ -253,7 +254,7 @@ export class TrackListPanel {
 export function trackMenu(store: AppStore, player: Player, t: Track, play: () => void, anchor?: HTMLElement): MenuItem[] {
   const liked = store.get().likedIds.has(t.id);
   return [
-    { label: "Play", action: play, disabled: !t.playable },
+    { label: "Play", action: play, disabled: !canTry(t) },
     { label: "Play next", action: () => player.playNext(t), disabled: !t.playable },
     { label: "Add to queue", action: () => player.enqueue(t), disabled: !t.playable },
     { label: liked ? "Unlike" : "Like", action: () => void toggleLike(store, t) },

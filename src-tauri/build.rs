@@ -52,6 +52,7 @@ const COMMANDS: &[&str] = &[
     "get_feed",
     "follow_artist",
     "get_followings",
+    "find_standin",
     "refresh_session",
     "get_local_likes",
     "check_for_update",

@@ -143,6 +143,7 @@ async function boot(): Promise<void> {
     notify: (msg) => toast(msg),
     transport: tauriTransport,
     related: (track) => api.relatedTracks(track.id),
+    standin: (track) => api.findStandin(track),
   });
   const app = mountApp(root, store, player, info.version);
   startDiscordStatus(store);
