@@ -52,6 +52,15 @@ const CAT_SVG = `
       <rect x="56" y="107" width="22" height="4" fill="#139a33"/>
       <rect x="124" y="107" width="22" height="4" fill="#139a33"/>
     </g>
+    <g class="cat-acc cat-acc-chrome">
+      <path d="M70 44 L96 44 L58 140 L40 132 Z" fill="rgba(255,255,255,0.75)"/>
+      <path d="M104 44 L114 44 L76 148 L68 146 Z" fill="rgba(255,255,255,0.55)"/>
+    </g>
+    <g class="cat-acc cat-acc-bubblegum" stroke="${INK}" stroke-width="3.5" stroke-linejoin="round">
+      <path d="M160 34 L136 18 Q130 34 136 50 Z" fill="#ff5fb8"/>
+      <path d="M160 34 L184 18 Q190 34 184 50 Z" fill="#ff5fb8"/>
+      <circle cx="160" cy="34" r="7" fill="#ff9ad3"/>
+    </g>
     <g class="cat-acc cat-acc-midnight">
       <path d="M58 44 Q110 -6 178 30 Q206 2 222 24" fill="#4b3cd1" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/>
       <path d="M52 48 Q112 20 182 34" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round"/>

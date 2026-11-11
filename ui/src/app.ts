@@ -16,7 +16,7 @@ import { api } from "./api";
 import { MiniPlayer } from "./components/miniPlayer";
 import { Visualizer } from "./components/visualizer";
 import { BeatAura } from "./components/beatAura";
-import { createThemeFx } from "./components/themeFx";
+import { attachThemeBehaviour, createThemeFx } from "./components/themeFx";
 import { closePopover } from "./components/popover";
 import { toast } from "./components/toast";
 import { TopBar } from "./components/topBar";
@@ -85,6 +85,7 @@ export function mountApp(root: HTMLElement, store: AppStore, player: Player, ver
   const pages = h("div", { class: "pages" }, [eqPage.el, soundPage.el, artistPage.el]);
   // Glow around the window edges on drum hits (on top of everything, click-through).
   const aura = new BeatAura(visualizer);
+  attachThemeBehaviour(visualizer);
 
   root.replaceChildren(backdrop.el, createThemeFx(), topBar.el, tabs.el, toolbar.el, content, pages, dock.el, nowPlaying.el, drawer.el, mini.el, aura.el);
 
