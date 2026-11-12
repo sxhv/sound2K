@@ -606,7 +606,7 @@
   color: var(--tangerine);
 }
 
-.track-row.is-unavailable .track-meta,
+.track-row.is-unavailable :is(.track-title, .track-artist, .badge:not(.badge-go)),
 .track-row.is-unavailable .art {
   opacity: 0.5;
 }
@@ -4557,8 +4557,13 @@ button.home-card {
 .badge.badge-go {
   color: #fff;
   border-color: transparent;
-  background: linear-gradient(90deg, #ff3a6e, #ff7a1a);
-  font-weight: 700;
+  background: linear-gradient(90deg, #ff2d6f, #ff5c3a);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 1px 6px;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(255, 45, 111, 0.35);
 }
 
 /* SoundCloud's embedded player (protected songs): kept out of sight. */

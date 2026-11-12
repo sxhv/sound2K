@@ -1,4 +1,5 @@
 import { h } from "../lib/dom";
+import { isProtected } from "../player/player";
 import { formatCount, formatDuration, placeholderGradient } from "../lib/format";
 import { icon } from "../lib/icons";
 import { artUrl, type ArtSize } from "../lib/artwork";
@@ -72,16 +73,21 @@ export function buildTrackRow(
   extras: readonly HTMLElement[] = [],
 ): HTMLElement {
   const row = h("div", { class: "track-row", attrs: { role: "listitem", tabindex: "0", "data-id": track.id } });
-  if (!track.playable) row.classList.add("is-unavailable");
+  const usable = track.playable || isProtected(track);
+  if (!usable) row.classList.add("is-unavailable");
 
   const titleLine = h("div", { class: "track-title-line" }, [
     h("span", { class: "track-title", text: track.title, attrs: { title: track.title } }),
   ]);
-  if (!track.playable) {
+  if (!usable) {
     // Short label on the row; the full reason (incl. formats) on hover.
     const why = track.unavailable ?? "";
-    const label = why.startsWith("Go+") ? "Go+" : why.startsWith("Not available in your country") ? "Not in your country" : why.startsWith("Protected") ? "Protected" : "Unavailable";
-    titleLine.append(h("span", { class: `badge${label === "Go+" ? " badge-go" : ""}`, text: label, attrs: { title: why || "Can't be played here" } }));
+    if (why.startsWith("Go+")) {
+      titleLine.append(h("span", { class: "badge badge-go", text: "GO+", attrs: { title: "SoundCloud Go+ only: needs a SoundCloud subscription" } }));
+    } else {
+      const label = why.startsWith("Not available in your country") ? "Not in your country" : "Unavailable";
+      titleLine.append(h("span", { class: "badge", text: label, attrs: { title: why || "Can't be played here" } }));
+    }
   }
 
   const artistEl = h("span", { class: "track-artist", text: track.artist });

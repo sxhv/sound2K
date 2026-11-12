@@ -28,6 +28,10 @@ pub struct Track {
     /// Why it can't be played here, when `playable` is false.
     #[serde(default)]
     pub unavailable: Option<String>,
+    /// Only offered as DRM-protected streams: played via a stand-in or
+    /// SoundCloud's embedded player, never by the app's own engine.
+    #[serde(default)]
+    pub protected: bool,
 }
 
 /// A SoundCloud user, as shown on an artist page or in search.

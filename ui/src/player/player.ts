@@ -36,7 +36,8 @@ export interface PlayerDeps {
 
 /** Only offered as DRM-protected streams (Sound2K plays a stand-in instead). */
 export function isProtected(t: Track): boolean {
-  return !t.playable && (t.unavailable ?? "").startsWith("Protected");
+  // (Older saved data marked these unplayable with a "Protected" reason.)
+  return t.protected === true || (!t.playable && (t.unavailable ?? "").startsWith("Protected"));
 }
 
 /** Playable as is, or worth looking for a stand-in. */
@@ -177,7 +178,7 @@ export class Player {
   /** Download the next track in the background so it starts instantly. */
   private preloadUpcoming(): void {
     const next = this.peekNext();
-    if (next && next.id !== this.p.current?.id) {
+    if (next && next.id !== this.p.current?.id && !isProtected(next)) {
       void this.transport.preload(next).catch(() => undefined);
     }
   }
@@ -200,7 +201,7 @@ export class Player {
     let skipped = 0;
     while (queue.length > 0) {
       const t = queue.shift() as Track;
-      if (!canTry(t) || this.standins.get(t.id) === null) {
+      if (!canTry(t) || (this.standins.get(t.id) === null && !s.embedFallback)) {
         skipped++;
         continue;
       }
@@ -351,7 +352,7 @@ export class Player {
   }
 
   private start(track: Track, opts: StartOptions = {}): void {
-    if (isProtected(track)) {
+    if (isProtected(track) && !track.viaEmbed) {
       void this.startStandin(track, opts);
       return;
     }

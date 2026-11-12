@@ -25,6 +25,9 @@ export interface Track {
   plays?: number | null;
   /** Why it can't be played here (when playable is false). */
   unavailable?: string | null;
+  /** Only offered as DRM-protected streams (played via a stand-in or
+   * SoundCloud's embedded player). */
+  protected?: boolean;
   /** Play with SoundCloud's embedded player (protected track, no stand-in). */
   viaEmbed?: boolean;
 }

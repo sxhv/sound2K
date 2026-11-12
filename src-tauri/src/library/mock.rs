@@ -184,6 +184,7 @@ fn build() -> MockLibrary {
                 plays: Some(rng.below(2_000_000) as u64),
                 unavailable: (i % 37 == 5)
                     .then(|| "Go+ only (SoundCloud subscription)".to_string()),
+                protected: false,
             }
         })
         .collect();

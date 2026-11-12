@@ -349,7 +349,7 @@ export class TopBar {
       toggle("Artwork colours", s.artBackgrounds, (on) => this.store.set({ artBackgrounds: on })),
       toggle("Cat mascot", s.mascot, (on) => this.store.set({ mascot: on })),
       toggle("Beat glow", s.aura, (on) => this.store.set({ aura: on })),
-      toggle("Protected songs: try SoundCloud's player (experimental)", s.embedFallback, (on) => this.store.set({ embedFallback: on })),
+      toggle("Protected songs: use SoundCloud's player if needed", s.embedFallback, (on) => this.store.set({ embedFallback: on })),
       ...(this.discordAvailable ? this.buildDiscordSetting(toggle) : []),
     ];
   }

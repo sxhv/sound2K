@@ -104,7 +104,7 @@ pub struct Settings {
     /// Glass blur strength: 0 (crisp) … 2 (heavy frost); 1 = default.
     pub glass: f32,
     /// Play protected (DRM-only) songs with SoundCloud's own embedded player
-    /// when there's no unprotected stand-in. Experimental.
+    /// when there's no unprotected stand-in.
     pub embed_fallback: bool,
 }
 

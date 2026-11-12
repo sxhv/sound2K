@@ -33,7 +33,7 @@ pub fn pick(original: &Track, candidates: Vec<Track>) -> Option<Track> {
     }
     candidates
         .into_iter()
-        .filter(|c| c.id != original.id && c.playable)
+        .filter(|c| c.id != original.id && c.playable && !c.protected)
         .filter(|c| normalise(&c.title) == title)
         .filter(|c| {
             normalise(&c.artist) == artist
@@ -61,6 +61,7 @@ mod tests {
             artist_id: None,
             plays: Some(plays),
             unavailable: None,
+            protected: false,
         }
     }
 

@@ -52,7 +52,7 @@
 - **Home:** a start page with a *Continue listening* banner (with Up next), *Jump back in*, *Quick picks*, *Mixes for you* (stations built from your most-liked artists), new tracks from artists you follow, *Because you played…*, *Artists you follow*, *Recently liked* and your playlists. Cards resize to fill wide windows
 - **Artist pages** with Popular, Recent, Albums, EPs & Singles, Playlists and Reposts, plus search and sorting (most played, title, length) and **Follow**
 - **Play counts** on every song
-- **Protected tracks:** some uploads are only offered as DRM-protected streams, which Sound2K doesn't play (or try to get around). When you play one, Sound2K looks for another upload of the same song (same artist, title and length) and plays that instead
+- **Protected tracks play too:** uploads only offered as DRM-protected streams play through an unprotected upload of the same song when there is one, or otherwise through SoundCloud's own embedded player inside the app (which handles the protection; EQ and the visualizer don't apply to those). Go+-only songs are marked **GO+**
 - **Your Sound2K library:** SoundCloud doesn't accept likes, follows or playlist changes from apps, so Sound2K keeps its own, saved on your PC:
   - **Likes:** Liked Songs switches between *All*, *Sound2K* (liked in the app) and *SoundCloud* (your SoundCloud likes, read-only)
   - **Follows:** follow artists in the app; they show alongside your SoundCloud follows

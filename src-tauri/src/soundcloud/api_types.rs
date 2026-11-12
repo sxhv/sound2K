@@ -229,7 +229,15 @@ impl ApiTrack {
     }
 
     pub fn into_track(self, liked_at_ms: Option<i64>) -> Track {
-        let unavailable = self.unavailable_reason();
+        let mut unavailable = self.unavailable_reason();
+        // Protected (DRM-only) uploads are still playable: through an
+        // unprotected stand-in or SoundCloud's own embedded player.
+        let protected = unavailable
+            .as_deref()
+            .is_some_and(|r| r.starts_with("Protected"));
+        if protected {
+            unavailable = None;
+        }
         let playable = unavailable.is_none();
         let artist_id = self.user.as_ref().map(|u| u.id);
         // Like soundcloud.com: the release's artist name when the label gave
@@ -260,6 +268,7 @@ impl ApiTrack {
             artist_id,
             plays: self.playback_count,
             unavailable,
+            protected,
         }
     }
 }
@@ -509,7 +518,7 @@ mod tests {
         let drm = parse(
             r#"{"id": 2, "title": "b", "policy": "MONETIZE", "media": {"transcodings": [{"url": "x", "format": {"protocol": "ctr-encrypted-hls", "mime_type": "audio/mp4"}}]}}"#,
         );
-        assert!(drm.unavailable.unwrap().starts_with("Protected"));
+        assert!(drm.protected && drm.playable && drm.unavailable.is_none());
         let opus = parse(
             r#"{"id": 3, "title": "c", "media": {"transcodings": [{"url": "x", "format": {"protocol": "hls", "mime_type": "audio/ogg; codecs=\"opus\""}}]}}"#,
         );

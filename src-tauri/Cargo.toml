@@ -1,6 +1,6 @@
 [package]
 name = "sound2k"
-version = "0.1.18"
+version = "0.1.19"
 description = "Sound2K — a compact SoundCloud desktop player"
 edition = "2021"
 rust-version = "1.80"

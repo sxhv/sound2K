@@ -247,6 +247,7 @@ mod tests {
             artist_id: None,
             plays: None,
             unavailable: None,
+            protected: false,
         }
     }
 
